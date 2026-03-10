@@ -1,0 +1,39 @@
+{
+  "name": "semed-scanner",
+  "version": "1.0.0",
+  "main": "src/main/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:renderer\" \"wait-on http://localhost:5173 && npm run dev:electron\"",
+    "dev:renderer": "cd src/renderer && npm run dev",
+    "dev:electron": "set NODE_ENV=development&& electron . --dev",
+    "build": "cd src/renderer && npm run build && cd ../.. && electron-builder",
+    "build:win": "npm run build -- --win",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "electron": "^35.0.0",
+    "electron-builder": "^25.1.8",
+    "wait-on": "^9.0.4"
+  },
+  "dependencies": {
+    "axios": "^1.13.6",
+    "dotenv": "^16.4.5",
+    "electron-store": "^11.0.2",
+    "node-global-key-listener": "^0.3.0",
+    "node-notifier": "^10.0.1"
+  },
+  "build": {
+    "appId": "com.hospital.semed-scanner",
+    "productName": "SEMed Scanner",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "node_modules/**/*",
+      ".env"
+    ]
+  }
+}
