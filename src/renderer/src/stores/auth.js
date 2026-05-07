@@ -9,28 +9,45 @@ const Toast = Swal.mixin({
   timer: 3000,
   timerProgressBar: true,
   customClass: {
-    popup: 'swal-pearl'
+    popup: 'swal-app'
   }
 })
 
 export const useAuthStore = defineStore('auth', () => {
-  // State
   const user = ref(null)
   const token = ref(null)
-  const selectedStation = ref(null)
+  const selectedStations = ref([])
   const isLoading = ref(false)
   const isAuthenticated = computed(() => !!token.value)
+  const hasStations = computed(() => selectedStations.value.length > 0)
 
-  // Actions
+  function isStationSelected(id) {
+    return selectedStations.value.some(s => s.id === id)
+  }
+
+  async function saveStationsToConfig() {
+    await window.api.saveConfig({
+      token: token.value,
+      stationIds: selectedStations.value.map(s => s.id)
+    })
+  }
+
+  async function toggleStation(station) {
+    const idx = selectedStations.value.findIndex(s => s.id === station.id)
+    if (idx >= 0) {
+      selectedStations.value.splice(idx, 1)
+    } else {
+      selectedStations.value.push({ id: station.id, name: station.name })
+    }
+    await saveStationsToConfig()
+  }
+
   async function login(email, password, rememberMe = false) {
     isLoading.value = true
     try {
-      console.log('🔐 Attempting login...')
       const result = await window.api.login(email, password, rememberMe)
-      console.log('🔐 Login result:', result)
-      
+
       if (result.success) {
-        // Extract only serializable fields
         const userData = {
           id: result.data?.user?.id,
           name: result.data?.user?.name,
@@ -38,37 +55,27 @@ export const useAuthStore = defineStore('auth', () => {
           role: result.data?.user?.role,
           permissions: result.data?.user?.permissions || []
         }
-        
+
         user.value = userData
         token.value = result.data?.token
-        
-        // Save to electron store (only token, avoid user object issues)
-        try {
-          await window.api.saveConfig({
-            token: token.value
-          })
-        } catch (saveError) {
-          console.error('Failed to save config:', saveError)
-        }
-        
+
+        await window.api.saveConfig({ token: token.value })
+
         Toast.fire({
           icon: 'success',
           title: `ยินดีต้อนรับ ${userData.name || userData.email}`
         })
-        
+
         return { success: true }
       } else {
         throw new Error(result.message || 'เข้าสู่ระบบไม่สำเร็จ')
       }
     } catch (error) {
-      console.error('Login error:', error)
       Swal.fire({
         icon: 'error',
         title: 'เข้าสู่ระบบไม่สำเร็จ',
         text: error.message || 'กรุณาตรวจสอบอีเมลและรหัสผ่าน',
-        customClass: {
-          popup: 'swal-pearl'
-        }
+        customClass: { popup: 'swal-app' }
       })
       return { success: false, error }
     } finally {
@@ -80,11 +87,10 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const config = await window.api.getConfig()
       if (!config.token) return false
-      
+
       const result = await window.api.verifyToken()
       if (result.success) {
         token.value = config.token
-        // Extract only serializable fields
         const userData = result.data?.user
         user.value = userData ? {
           id: userData.id,
@@ -93,12 +99,10 @@ export const useAuthStore = defineStore('auth', () => {
           role: userData.role,
           permissions: userData.permissions || []
         } : null
-        
-        if (config.stationId) {
-          selectedStation.value = {
-            id: config.stationId,
-            name: config.stationName
-          }
+
+        if (Array.isArray(config.stationIds) && config.stationIds.length > 0) {
+          // stationIds เป็น array ของ id เท่านั้น ต้อง fetch names ทีหลังใน Dashboard
+          selectedStations.value = config.stationIds.map(id => ({ id, name: '' }))
         }
         return true
       }
@@ -109,21 +113,12 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function selectStation(station) {
-    selectedStation.value = station
-    await window.api.saveConfig({
-      token: token.value,
-      stationId: station.id,
-      stationName: station.name
-    })
-  }
-
   async function logout() {
     await window.api.clearConfig()
     user.value = null
     token.value = null
-    selectedStation.value = null
-    
+    selectedStations.value = []
+
     Toast.fire({
       icon: 'info',
       title: 'ออกจากระบบสำเร็จ'
@@ -133,12 +128,14 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     user,
     token,
-    selectedStation,
+    selectedStations,
     isLoading,
     isAuthenticated,
+    hasStations,
+    isStationSelected,
+    toggleStation,
     login,
     verifyToken,
-    selectStation,
     logout
   }
 })

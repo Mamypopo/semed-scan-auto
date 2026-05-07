@@ -3,111 +3,109 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-primary: #9333ea;
+    --color-primary-light: #a855f7;
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-danger: #ef4444;
+    --color-surface: #ffffff;
+    --color-text: #09090b;
+  }
+
   html {
     font-family: 'Inter', 'Noto Sans Thai', system-ui, sans-serif;
+    font-size: 14px;
   }
-  
+
   body {
-    @apply bg-slate-50 text-zinc-900;
+    background-color: #f4f4f5;
+    color: #09090b;
   }
 }
 
 @layer components {
-  .btn-pearl {
-    @apply relative overflow-hidden px-6 py-3 rounded-xl font-medium transition-all duration-300;
-    @apply bg-gradient-to-br from-slate-100 via-zinc-100 to-slate-200;
-    @apply border border-zinc-200 shadow-pearl;
-    @apply hover:shadow-pearl-lg hover:from-slate-50 hover:via-white hover:to-slate-100;
+  /* Card with glass-like panel */
+  .card {
+    @apply bg-white/80 backdrop-blur-md rounded-2xl border border-zinc-200/60 shadow-sm;
+    @apply p-4;
   }
-  
-  .btn-pearl::before {
-    content: '';
-    @apply absolute inset-0 bg-gradient-shine opacity-0 transition-opacity duration-300;
-    background-size: 200% 100%;
+
+  /* Input field */
+  .input {
+    @apply w-full px-3 py-2.5 rounded-xl border border-zinc-200 bg-white text-[#09090b];
+    @apply placeholder-zinc-400 text-sm;
+    @apply focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-400;
+    @apply transition-all duration-150;
   }
-  
-  .btn-pearl:hover::before {
-    @apply opacity-100 animate-shimmer;
+
+  /* Primary button */
+  .btn-primary {
+    @apply flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl;
+    @apply bg-[#9333ea] hover:bg-[#7e22ce] text-white font-semibold text-sm;
+    @apply transition-all duration-150 shadow-md shadow-purple-200;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
   }
-  
-  .btn-primary-pearl {
-    @apply btn-pearl;
-    @apply from-zinc-800 via-zinc-900 to-zinc-800 text-white;
-    @apply border-zinc-700;
-    @apply hover:from-zinc-700 hover:via-zinc-800 hover:to-zinc-700;
+
+  /* Ghost button */
+  .btn-ghost {
+    @apply px-3 py-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-all text-xs font-medium;
   }
-  
-  .glass-panel {
-    @apply backdrop-blur-md bg-white/70 border border-white/40 shadow-pearl;
+
+  /* Badge / chip */
+  .badge-purple {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 border border-purple-100 text-purple-700 text-xs font-medium;
   }
-  
-  .pearl-glow {
-    @apply relative;
+
+  .badge-success {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-medium;
   }
-  
-  .pearl-glow::after {
-    content: '';
-    @apply absolute inset-0 rounded-full blur-xl opacity-50;
-    @apply bg-gradient-to-r from-primary-200 via-accent-100 to-primary-200;
-    animation: pulse-slow 3s ease-in-out infinite;
-  }
-  
-  .input-minimal {
-    @apply w-full px-4 py-3 rounded-xl border border-zinc-200 bg-white/80;
-    @apply placeholder-zinc-400 text-zinc-900;
-    @apply focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-300;
-    @apply transition-all duration-200;
-  }
-  
-  .card-minimal {
-    @apply bg-white rounded-2xl border border-zinc-100 shadow-pearl;
-    @apply p-6;
+
+  .badge-danger {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-50 border border-red-100 text-red-600 text-xs font-medium;
   }
 }
 
-/* Swal Customization */
-.swal-pearl {
-  @apply rounded-2xl !important;
-  @apply bg-white/95 backdrop-blur-lg !important;
-  @apply border border-zinc-100 !important;
-  @apply shadow-pearl-lg !important;
+/* SweetAlert2 */
+.swal-app {
+  background: #fff !important;
+  border: 1px solid #e4e4e7 !important;
+  border-radius: 1.25rem !important;
+  box-shadow: 0 8px 32px -8px rgba(0,0,0,0.08) !important;
 }
 
-.swal-pearl .swal2-title {
-  @apply text-zinc-900 font-semibold !important;
+.swal-app .swal2-title {
+  color: #09090b !important;
+  font-weight: 600 !important;
+  font-size: 1rem !important;
 }
 
-.swal-pearl .swal2-html-container {
-  @apply text-zinc-600 !important;
+.swal-app .swal2-html-container {
+  color: #71717a !important;
+  font-size: 0.875rem !important;
 }
 
-.swal-pearl .swal2-confirm {
-  @apply btn-primary-pearl !important;
-  @apply px-6 py-2.5 !important;
-  @apply rounded-xl !important;
-  @apply shadow-none !important;
+.swal-app .swal2-confirm {
+  background: #9333ea !important;
+  border-radius: 0.75rem !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  box-shadow: none !important;
+  padding: 0.5rem 1.5rem !important;
 }
 
-.swal-pearl .swal2-cancel {
-  @apply btn-pearl !important;
-  @apply px-6 py-2.5 !important;
-  @apply rounded-xl !important;
-  @apply shadow-none !important;
+.swal-app .swal2-cancel {
+  background: #f4f4f5 !important;
+  color: #09090b !important;
+  border-radius: 0.75rem !important;
+  font-weight: 600 !important;
+  font-size: 0.875rem !important;
+  box-shadow: none !important;
+  padding: 0.5rem 1.5rem !important;
 }
 
 /* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  @apply bg-transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  @apply bg-zinc-200 rounded-full;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-zinc-300;
-}
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }

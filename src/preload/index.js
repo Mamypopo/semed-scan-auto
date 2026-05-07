@@ -70,6 +70,8 @@ contextBridge.exposeInMainWorld('api', {
   /**
    * ลบ event listener (สำหรับ cleanup)
    */
+  testScan: (barcode) => ipcRenderer.invoke('scan:test', barcode),
+
   removeAllListeners: () => {
     ipcRenderer.removeAllListeners('scan:success')
     ipcRenderer.removeAllListeners('scan:error')

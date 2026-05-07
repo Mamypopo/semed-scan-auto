@@ -85,8 +85,7 @@ function getMergedConfig() {
   return {
     ...envConfig,
     token: storeConfig.token,
-    stationId: storeConfig.stationId || envConfig.defaultStationId,
-    stationName: storeConfig.stationName,
+    stationIds: storeConfig.stationIds || [],
     baseUrl: storeConfig.baseUrl || envConfig.apiBaseUrl
   }
 }

@@ -1,5 +1,5 @@
 const axios = require('axios')
-const { getToken, getStationId } = require('./store')
+const { getToken } = require('./store')
 const { getApiBaseUrl } = require('./config')
 
 // สร้าง axios instance
@@ -21,7 +21,7 @@ api.interceptors.request.use(
       config.baseURL = baseUrl
     }
     
-    // แนบ Bearer Token เสมอ (สำคัญสำหรับ RBAC Check ที่ต้องมี Permission EXAM_RECORD)
+    // แนบ Bearer Token เสมอ (สำคัญสำหรับ RBAC Check ที่ต้องมี Permission SCAN_CREATE)
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -38,9 +38,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      // 403 Forbidden - ไม่มีสิทธิ์ EXAM_RECORD
+      // 403 Forbidden - ไม่มีสิทธิ์ SCAN_CREATE
       if (error.response.status === 403) {
-        console.error('RBAC Error: ไม่มีสิทธิ์ EXAM_RECORD')
+        console.error('RBAC Error: ไม่มีสิทธิ์ SCAN_CREATE')
       }
     }
     return Promise.reject(error)
@@ -98,29 +98,18 @@ async function getStations() {
  * @param {string} barcode - รหัสบาร์โค้ด (CN หรือ HN)
  * @returns {Promise}
  */
-async function sendScanData(barcode) {
-  const stationId = getStationId()
-  const scanMode = getScanMode() || 'checkup'
-  
+async function sendScanData(barcode, stationId) {
   if (!stationId) {
     throw new Error('ไม่ได้ตั้งค่า Station ID')
   }
-  
-  // ใช้ endpoint เดียว
-  const endpoint = '/scan'
-  
-  // ส่งทุกอย่างไปให้ backend จัดการ
+
   const payload = {
-    barcode: barcode,        // รหัสที่สแกน (CN หรือ HN)
-    stationId: parseInt(stationId),
-    mode: scanMode,          // 'checkup' หรือ 'clinic'
-    timestamp: new Date().toISOString()
+    cn: barcode,
+    stationId: parseInt(stationId)
   }
-  
-  console.log(`📡 Sending scan to ${endpoint}:`, payload)
-  
-  const response = await api.post(endpoint, payload)
-  return response
+
+  console.log(`📡 Sending scan to /scan/checkpoint (station ${stationId}):`, payload)
+  return api.post('/scan/checkpoint', payload)
 }
 
 /**

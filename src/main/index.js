@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, Notification } = require('electron')
 const path = require('path')
 const notifier = require('node-notifier')
 
-const { saveConfig, clearConfig } = require('./store')
+const { saveConfig, clearConfig, getStationIds } = require('./store')
 const { getMergedConfig, shouldOpenDevtools, isSoundEnabled } = require('./config')
 const { login, getStations, sendScanData, verifyToken } = require('./api')
 const { initScanner } = require('./scanner')
@@ -47,7 +47,10 @@ function createWindow() {
  * แจ้งเตือนสำเร็จ
  */
 function notifySuccess(data) {
-  const patientName = data?.patientName || data?.patient?.name || 'ไม่ทราบชื่อ'
+  const p = data?.patient
+  const patientName = p
+    ? `${p.prefix || ''} ${p.first_name || ''} ${p.last_name || ''}`.trim()
+    : data?.patientName || 'ไม่ทราบชื่อ'
   
   // วิธีที่ 1: Electron Native Notification (แนะนำสำหรับ Windows 10/11)
   if (Notification.isSupported()) {
@@ -91,7 +94,7 @@ function notifyError(error) {
     const status = error.response.status
     if (status === 403) {
       title = '⛔ ไม่มีสิทธิ์'
-      message = 'คุณไม่มีสิทธิ์ EXAM_RECORD'
+      message = 'คุณไม่มีสิทธิ์ SCAN_CREATE'
     } else if (status === 401) {
       title = '🔒 หมดอายุ'
       message = 'กรุณาเข้าสู่ระบบใหม่'
@@ -133,15 +136,64 @@ function notifyError(error) {
 // Scanner Handler
 // ==========================================
 
+let lastScanBarcode = ''
+let lastScanTime = 0
+
 async function handleScan(barcode) {
-  try {
-    console.log(`🔄 กำลังส่งข้อมูล: ${barcode}`)
-    const response = await sendScanData(barcode)
-    console.log('✅ สำเร็จ:', response.data)
-    notifySuccess(response.data)
-  } catch (error) {
-    console.error('❌ ผิดพลาด:', error.message)
-    notifyError(error)
+  // ป้องกัน double scan (global + renderer ทำงานพร้อมกัน)
+  const now = Date.now()
+  if (barcode === lastScanBarcode && now - lastScanTime < 1000) return
+  lastScanBarcode = barcode
+  lastScanTime = now
+
+  let cn = barcode
+  let stationIds = getStationIds()
+
+  // Parse format CN.stationId เช่น "691220014.16"
+  if (barcode.includes('.')) {
+    const parts = barcode.split('.')
+    const embeddedStationId = parseInt(parts[parts.length - 1])
+    if (!isNaN(embeddedStationId)) {
+      cn = parts.slice(0, -1).join('.')
+      stationIds = [embeddedStationId]
+      console.log(`🔍 Parsed barcode: cn="${cn}" stationId=${embeddedStationId}`)
+    }
+  }
+
+  if (!stationIds.length) {
+    if (Notification.isSupported()) {
+      new Notification({
+        title: '⚠️ ไม่มีจุดตรวจ',
+        body: 'กรุณาเลือกจุดตรวจก่อนสแกน',
+        silent: true
+      }).show()
+    }
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('scan:error', {
+        success: false,
+        error: 'กรุณาเลือกจุดตรวจก่อนสแกน',
+        timestamp: new Date().toISOString()
+      })
+    }
+    return
+  }
+
+  console.log(`🔄 สแกน: cn="${cn}" → ${stationIds.length} จุดตรวจ`)
+  const results = await Promise.allSettled(
+    stationIds.map(id => sendScanData(cn, id))
+  )
+
+  const fulfilled = results.filter(r => r.status === 'fulfilled')
+  if (fulfilled.length > 0) {
+    console.log('✅ สำเร็จ:', fulfilled[0].value.data)
+    notifySuccess(fulfilled[0].value.data)
+  } else {
+    const err = results[0].reason
+    console.error('❌ ผิดพลาดทุก station')
+    console.error('   status :', err?.response?.status)
+    console.error('   message:', err?.response?.data?.message || err?.message)
+    console.error('   data   :', JSON.stringify(err?.response?.data))
+    notifyError(err)
   }
 }
 
@@ -193,6 +245,12 @@ ipcMain.handle('auth:verify', async () => {
   }
 })
 
+ipcMain.handle('scan:test', async (event, barcode) => {
+  console.log(`🧪 Test scan triggered from UI: "${barcode}"`)
+  await handleScan(barcode)
+  return { success: true }
+})
+
 ipcMain.handle('stations:get', async () => {
   try {
     const result = await getStations()
@@ -209,7 +267,7 @@ ipcMain.handle('stations:get', async () => {
 app.whenReady().then(() => {
   createWindow()
   initScanner(handleScan)
-  
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()

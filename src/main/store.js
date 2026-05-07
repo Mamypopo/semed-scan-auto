@@ -4,8 +4,7 @@ const store = new Store({
   name: 'config',
   defaults: {
     token: '',
-    stationId: '',
-    stationName: '',
+    stationIds: '[]',
     baseUrl: ''
   }
 })
@@ -13,26 +12,28 @@ const store = new Store({
 const getToken = () => store.get('token')
 const setToken = (token) => store.set('token', token)
 
-const getStationId = () => store.get('stationId')
-const setStationId = (stationId) => store.set('stationId', stationId)
+const getStationIds = () => {
+  try { return JSON.parse(store.get('stationIds') || '[]') } catch { return [] }
+}
+const setStationIds = (ids) => store.set('stationIds', JSON.stringify(ids))
 
-const getStationName = () => store.get('stationName')
-const setStationName = (stationName) => store.set('stationName', stationName)
+const getStationId = () => {
+  const ids = getStationIds()
+  return ids.length ? ids[0] : ''
+}
 
 const getBaseUrl = () => store.get('baseUrl')
 const setBaseUrl = (baseUrl) => store.set('baseUrl', baseUrl)
 
 const getConfig = () => ({
   token: store.get('token'),
-  stationId: store.get('stationId'),
-  stationName: store.get('stationName'),
+  stationIds: getStationIds(),
   baseUrl: store.get('baseUrl')
 })
 
 const saveConfig = (config) => {
   if (config.token !== undefined) store.set('token', config.token)
-  if (config.stationId !== undefined) store.set('stationId', config.stationId)
-  if (config.stationName !== undefined) store.set('stationName', config.stationName)
+  if (config.stationIds !== undefined) setStationIds(config.stationIds)
   if (config.baseUrl !== undefined) store.set('baseUrl', config.baseUrl)
 }
 
@@ -43,14 +44,11 @@ const clearConfig = () => {
 module.exports = {
   getToken,
   setToken,
+  getStationIds,
+  setStationIds,
   getStationId,
-  setStationId,
-  getStationName,
-  setStationName,
   getBaseUrl,
   setBaseUrl,
-  getScanMode,
-  setScanMode,
   getConfig,
   saveConfig,
   clearConfig
