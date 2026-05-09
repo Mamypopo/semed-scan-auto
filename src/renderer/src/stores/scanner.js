@@ -20,7 +20,7 @@ export const useScannerStore = defineStore('scanner', () => {
   const cancellingId = ref(null)
   const cancelMode = ref(false)
 
-  const recentScans = computed(() => scanHistory.value.slice(0, 5))
+  const recentScans = computed(() => scanHistory.value.slice(0, 20))
 
   async function cancelScan(scan) {
     if (!scan?.scanId || scan?.cancelled) return

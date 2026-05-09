@@ -228,6 +228,10 @@
             :style="!scan.success && !scan.cancelled ? 'color:#FF5151;' : ''">
             {{ scan.patientName || scan.error }}
           </span>
+          <span v-if="scan.data?.station?.name"
+            class="shrink-0 text-[10px] text-zinc-400 truncate max-w-[72px]">
+            {{ scan.data.station.name }}
+          </span>
           <span class="text-[10px] text-zinc-400 shrink-0">{{ formatTime(scan.timestamp, true) }}</span>
           <button
             v-if="scan.success && !scan.cancelled && scan.scanId"

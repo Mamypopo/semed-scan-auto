@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Notification } = require('electron')
+const { app, BrowserWindow, ipcMain, Notification, Menu } = require('electron')
 const path = require('path')
 const notifier = require('node-notifier')
 
@@ -22,6 +22,7 @@ function sendLog(level, message, detail = null) {
 }
 
 function createWindow() {
+  Menu.setApplicationMenu(null)
   const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev')
   
   mainWindow = new BrowserWindow({
@@ -64,24 +65,24 @@ function notifySuccess(data) {
     ? `${p.prefix || ''} ${p.first_name || ''} ${p.last_name || ''}`.trim()
     : data?.patientName || 'ไม่ทราบชื่อ'
   
-  // วิธีที่ 1: Electron Native Notification (แนะนำสำหรับ Windows 10/11)
-  if (Notification.isSupported()) {
-    new Notification({
-      title: '✅ สแกนสำเร็จ',
-      body: `ผู้ป่วย: ${patientName}`,
-      icon: path.join(__dirname, '../../assets/icon.png'),
-      silent: !isSoundEnabled(),
-      timeoutType: 'default'
-    }).show()
-  } else {
-    // วิธีที่ 2: node-notifier (สำรองสำหรับ Windows รุ่นเก่า)
-    notifier.notify({
-      title: '✅ สแกนสำเร็จ',
-      message: `ผู้ป่วย: ${patientName}`,
-      icon: path.join(__dirname, '../../assets/icon.png'),
-      sound: isSoundEnabled(),
-      wait: false
-    })
+  if (data?.isNewScan !== false) {
+    if (Notification.isSupported()) {
+      new Notification({
+        title: '✅ สแกนสำเร็จ',
+        body: `ผู้ป่วย: ${patientName}`,
+        icon: path.join(__dirname, '../../assets/icon.png'),
+        silent: !isSoundEnabled(),
+        timeoutType: 'default'
+      }).show()
+    } else {
+      notifier.notify({
+        title: '✅ สแกนสำเร็จ',
+        message: `ผู้ป่วย: ${patientName}`,
+        icon: path.join(__dirname, '../../assets/icon.png'),
+        sound: isSoundEnabled(),
+        wait: false
+      })
+    }
   }
   
   sendLog('success', `สแกนสำเร็จ: ${patientName}`, data?.station?.name ? `Station: ${data.station.name}` : null)
