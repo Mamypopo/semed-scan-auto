@@ -21,21 +21,44 @@
     "dotenv": "^16.4.5",
     "electron-store": "^11.0.2",
     "koffi": "^2.16.2",
-    "node-global-key-listener": "^0.3.0",
-    "node-notifier": "^10.0.1",
-    "uiohook-napi": "^1.5.5"
+    "node-notifier": "^10.0.1"
   },
   "build": {
     "appId": "com.hospital.semed-scanner",
     "productName": "SEMed Scanner",
+    "asar": false,
+    "compression": "maximum",
     "directories": {
       "output": "dist"
     },
     "files": [
-      "src/**/*",
+      "src/main/**/*",
+      "src/preload/**/*",
+      "out/renderer/**/*",
       "assets/**/*",
+      ".env",
       "node_modules/**/*",
-      ".env"
-    ]
+      "!node_modules/.cache/**/*",
+      "!node_modules/.bin/**/*",
+      "!node_modules/**/README*",
+      "!node_modules/**/test/**/*",
+      "!node_modules/**/tests/**/*",
+      "!node_modules/**/*.md"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "zip", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SEMed Scanner"
+    }
   }
 }

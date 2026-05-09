@@ -1,4 +1,5 @@
-require('dotenv').config()
+const path = require('path')
+require('dotenv').config({ path: path.join(__dirname, '../../.env') })
 const { getConfig: getStoreConfig } = require('./store')
 
 // ==========================================
@@ -9,12 +10,6 @@ const { getConfig: getStoreConfig } = require('./store')
 const envConfig = {
   // API
   apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3000',
-  
-  // Default values
-  defaultStationId: process.env.DEFAULT_STATION_ID || '',
-  
-  // Scanner
-  scanThresholdMs: parseInt(process.env.SCAN_THRESHOLD_MS) || 50,
   
   // Notification
   enableSound: process.env.ENABLE_SOUND === 'true',
@@ -31,22 +26,6 @@ const envConfig = {
 function getApiBaseUrl() {
   const storeConfig = getStoreConfig()
   return storeConfig.baseUrl || envConfig.apiBaseUrl
-}
-
-/**
- * ดึงค่า Station ID
- * ลำดับความสำคัญ: Store > Env > Empty
- */
-function getStationId() {
-  const storeConfig = getStoreConfig()
-  return storeConfig.stationId || envConfig.defaultStationId
-}
-
-/**
- * ดึงค่า Scanner Threshold
- */
-function getScanThresholdMs() {
-  return envConfig.scanThresholdMs
 }
 
 /**
@@ -92,8 +71,6 @@ function getMergedConfig() {
 
 module.exports = {
   getApiBaseUrl,
-  getStationId,
-  getScanThresholdMs,
   isSoundEnabled,
   isDevelopment,
   shouldOpenDevtools,

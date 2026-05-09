@@ -3,15 +3,10 @@
 
     <!-- Station bar -->
     <div class="flex items-center gap-2">
-      <!-- Chips หรือ placeholder -->
       <div class="flex-1 flex flex-wrap gap-1.5 min-h-[28px] items-center">
         <template v-if="authStore.selectedStations.length > 0 && !showStationSelect">
-          <span
-            v-for="s in authStore.selectedStations"
-            :key="s.id"
-            class="badge-purple"
-          >
-            <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+          <span v-for="s in authStore.selectedStations" :key="s.id" class="badge-primary">
+            <span class="w-1.5 h-1.5 rounded-full" style="background:#696CFF;"></span>
             {{ stationName(s) }}
           </span>
         </template>
@@ -20,20 +15,20 @@
 
       <button
         @click="toggleStationPanel"
-        class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all"
-        :class="showStationSelect
-          ? 'bg-purple-50 border-purple-200 text-purple-700'
-          : 'bg-white border-zinc-200 text-zinc-600 hover:border-zinc-300 shadow-sm'"
+        class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+        :class="showStationSelect ? 'text-indigo-700' : 'bg-white text-zinc-500 hover:text-zinc-800'"
+        :style="showStationSelect
+          ? 'background:#eef2ff; border:1px solid #c7d2fe;'
+          : 'border:1px solid rgba(9,9,11,0.08); box-shadow:0 1px 2px rgba(9,9,11,0.04);'"
       >
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
         </svg>
         จุดตรวจ
-        <span
-          v-if="authStore.selectedStations.length > 0"
-          class="w-4 h-4 rounded-full bg-[#9333ea] text-white text-[9px] flex items-center justify-center font-bold"
-        >
+        <span v-if="authStore.selectedStations.length > 0"
+          class="w-4 h-4 rounded-full text-white text-[9px] flex items-center justify-center font-bold"
+          style="background:#696CFF;">
           {{ authStore.selectedStations.length }}
         </span>
       </button>
@@ -49,105 +44,84 @@
       </div>
 
       <div v-if="isLoadingStations" class="flex justify-center py-5">
-        <div class="w-5 h-5 border-2 border-zinc-200 border-t-purple-500 rounded-full animate-spin"></div>
+        <div class="w-5 h-5 border-2 border-zinc-100 border-t-[#696CFF] rounded-full animate-spin"></div>
       </div>
-
-      <div v-else-if="stations.length === 0" class="text-center py-5 text-zinc-400 text-xs">
-        ไม่พบจุดตรวจ
-      </div>
-
-      <div v-else class="space-y-1 max-h-52 overflow-y-auto -mx-1 px-1">
+      <div v-else-if="stations.length === 0" class="text-center py-5 text-zinc-400 text-xs">ไม่พบจุดตรวจ</div>
+      <div v-else class="space-y-0.5 max-h-52 overflow-y-auto -mx-1 px-1">
         <div
-          v-for="station in stations"
-          :key="station.id"
+          v-for="station in stations" :key="station.id"
           @click="authStore.toggleStation(station)"
           class="flex items-center gap-3 px-3 py-2 rounded-xl cursor-pointer transition-all select-none"
           :class="authStore.isStationSelected(station.id)
-            ? 'bg-purple-50 text-[#09090b]'
+            ? 'text-[#09090b]'
             : 'hover:bg-zinc-50 text-zinc-600 hover:text-zinc-900'"
+          :style="authStore.isStationSelected(station.id) ? 'background:#eef2ff;' : ''"
         >
-          <div
-            class="w-4 h-4 rounded-md border-2 shrink-0 flex items-center justify-center transition-all"
-            :class="authStore.isStationSelected(station.id)
-              ? 'bg-[#9333ea] border-[#9333ea]'
-              : 'border-zinc-300'"
-          >
+          <div class="w-4 h-4 rounded-md border-2 shrink-0 flex items-center justify-center transition-all"
+            :class="authStore.isStationSelected(station.id) ? 'border-[#696CFF]' : 'border-zinc-300'"
+            :style="authStore.isStationSelected(station.id) ? 'background:#696CFF;' : ''">
             <svg v-if="authStore.isStationSelected(station.id)" class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
             </svg>
           </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm truncate">{{ station.name }}</p>
-          </div>
-          <span class="shrink-0 px-2 py-0.5 rounded-md text-xs font-bold bg-zinc-100 text-zinc-500 border border-zinc-200">#{{ station.id }}</span>
+          <p class="flex-1 text-sm truncate">{{ station.name }}</p>
+          <span class="shrink-0 px-2 py-0.5 rounded-md text-xs font-bold bg-zinc-100 text-zinc-400 border border-zinc-200">#{{ station.id }}</span>
           <span v-if="station.isSpecial" class="shrink-0 px-1.5 py-0.5 rounded text-[10px] bg-amber-50 text-amber-600 border border-amber-100">พิเศษ</span>
         </div>
       </div>
     </div>
 
     <!-- Warning: no station -->
-    <div
-      v-if="!showStationSelect && !isReady"
-      class="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100"
-    >
-      <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+    <div v-if="!showStationSelect && !isReady"
+      class="flex items-center gap-2 px-3 py-2 rounded-xl"
+      style="background:#fffbeb; border:1px solid #fde68a;">
+      <svg class="w-3.5 h-3.5 shrink-0" style="color:#FFAB00;" fill="currentColor" viewBox="0 0 20 20">
         <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
       </svg>
-      <p class="text-xs text-amber-600 flex-1">กรุณาเลือกจุดตรวจก่อนสแกน</p>
-      <button @click="toggleStationPanel" class="text-xs text-amber-600 font-medium underline underline-offset-2">เลือก</button>
+      <p class="text-xs flex-1" style="color:#92400e;">กรุณาเลือกจุดตรวจก่อนสแกน</p>
+      <button @click="toggleStationPanel" class="text-xs font-semibold underline underline-offset-2" style="color:#92400e;">เลือก</button>
     </div>
 
     <!-- Scanner Status -->
-    <div class="card relative overflow-hidden">
-      <!-- Purple glow bg -->
-      <div
-        class="absolute inset-0 pointer-events-none transition-opacity duration-500 rounded-2xl overflow-hidden"
-        :class="isReady ? 'opacity-100' : 'opacity-0'"
-      >
-        <div class="absolute -top-8 left-1/2 -translate-x-1/2 w-40 h-20 rounded-full bg-purple-100 blur-3xl"></div>
-      </div>
+    <div
+      class="relative overflow-hidden rounded-2xl p-4 transition-all duration-500"
+      :style="isReady
+        ? 'background:linear-gradient(135deg,#696CFF 0%,#5558e3 100%); border:1px solid rgba(105,108,255,0.3); box-shadow:0 4px 20px -6px rgba(105,108,255,0.55),0 1px 3px rgba(9,9,11,0.08);'
+        : 'background:#fff; border:1px solid rgba(9,9,11,0.07); box-shadow:0 1px 2px rgba(9,9,11,0.04),0 4px 12px -4px rgba(9,9,11,0.06);'"
+    >
+      <div v-if="isReady" class="absolute -top-8 -right-8 w-32 h-32 rounded-full pointer-events-none" style="background:rgba(255,255,255,0.08);"></div>
+      <div v-if="isReady" class="absolute top-2 right-10 w-16 h-16 rounded-full pointer-events-none" style="background:rgba(255,255,255,0.05);"></div>
 
       <div class="relative flex items-center gap-4">
-        <!-- Scanner icon -->
-        <div class="relative shrink-0">
-          <div
-            v-if="isReady"
-            class="absolute inset-1 rounded-xl bg-purple-400/20 blur-md animate-pulse"
-          ></div>
-          <div
-            class="relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm transition-all"
-            :class="isReady ? 'bg-[#9333ea] shadow-purple-200' : 'bg-zinc-100'"
-          >
-            <svg
-              class="w-7 h-7 transition-colors"
-              :class="isReady ? 'text-white' : 'text-zinc-400'"
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          </div>
+        <div
+          class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-500"
+          :style="isReady ? 'background:rgba(255,255,255,0.15);' : 'background:#f4f4f6;'"
+        >
+          <svg class="w-7 h-7 transition-colors" :class="isReady ? 'text-white' : 'text-zinc-400'"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
         </div>
 
-        <!-- Status text -->
         <div class="flex-1">
-          <p class="font-semibold text-[#09090b] text-sm">
+          <p class="font-semibold text-sm" :class="isReady ? 'text-white' : 'text-[#09090b]'">
             {{ isReady ? 'พร้อมรับการสแกน' : 'ยังไม่พร้อม' }}
           </p>
-          <p class="text-xs text-zinc-400 mt-0.5">
+          <p class="text-xs mt-0.5" :class="isReady ? 'text-indigo-200/80' : 'text-zinc-400'">
             {{ isReady ? 'สแกนบาร์โค้ดผู้ป่วยได้เลย' : 'เลือกจุดตรวจก่อน' }}
           </p>
         </div>
 
-        <!-- Mode pill -->
-        <div class="shrink-0">
-          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-200 bg-zinc-50">
-            <span
-              class="w-1.5 h-1.5 rounded-full transition-colors"
-              :class="isReady ? 'bg-[#10b981] animate-pulse' : 'bg-zinc-300'"
-            ></span>
-            <span class="text-[11px] font-medium text-zinc-500">Checkup</span>
-          </div>
+        <div
+          class="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium"
+          :style="isReady
+            ? 'background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.2); color:#fff;'
+            : 'background:#f4f4f6; border:1px solid rgba(9,9,11,0.08); color:#71717a;'"
+        >
+          <span class="w-1.5 h-1.5 rounded-full" :class="isReady ? 'animate-pulse' : 'bg-zinc-300'"
+            :style="isReady ? 'background:#71DD37;' : ''"></span>
+          Checkup
         </div>
       </div>
     </div>
@@ -156,84 +130,61 @@
     <div class="card">
       <p class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-2">ผลล่าสุด</p>
 
-      <div v-if="!scannerStore.lastScan" class="flex items-center gap-2 py-0.5">
+      <div v-if="!scannerStore.lastScan" class="py-0.5">
         <span class="text-xs text-zinc-400">ยังไม่มีการสแกน</span>
       </div>
 
-      <!-- Error -->
-      <div
-        v-else-if="!scannerStore.lastScan.success"
-        class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50 border border-red-100"
-      >
-        <div class="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center bg-red-100">
-          <svg class="w-4 h-4 text-[#ef4444]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div v-else-if="!scannerStore.lastScan.success"
+        class="flex items-center gap-3 px-3 py-2.5 rounded-xl"
+        style="background:#fff5f5; border:1px solid #fecaca;">
+        <div class="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center" style="background:#fee2e2;">
+          <svg class="w-4 h-4" style="color:#FF5151;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </div>
         <div class="flex-1 min-w-0">
-          <p class="font-semibold text-sm text-red-700">{{ scannerStore.lastScan.error }}</p>
+          <p class="font-semibold text-sm" style="color:#b91c1c;">{{ scannerStore.lastScan.error }}</p>
           <p class="text-[10px] text-zinc-400 mt-0.5">{{ formatTime(scannerStore.lastScan.timestamp) }}</p>
         </div>
         <span class="badge-danger">ผิดพลาด</span>
       </div>
 
-      <!-- Success: Patient info card -->
-      <div
-        v-else
-        class="rounded-xl border overflow-hidden transition-all"
-        :class="scannerStore.lastScan.cancelled
-          ? 'border-zinc-200 bg-zinc-50'
+      <div v-else class="rounded-xl border overflow-hidden"
+        :style="scannerStore.lastScan.cancelled
+          ? 'background:#fafafa; border-color:#e4e4e7;'
           : scannerStore.lastScan.isNewScan === false
-            ? 'border-amber-200 bg-amber-50'
-            : 'border-emerald-200 bg-emerald-50'"
+            ? 'background:#fffbeb; border-color:#fde68a;'
+            : 'background:#f0fdf4; border-color:#bbf7d0;'"
       >
-        <!-- Top row: badges + cancel -->
         <div class="flex items-center gap-2 px-3 pt-2.5 pb-1.5">
-          <span
-            v-if="scannerStore.lastScan.cancelled"
-            class="badge-zinc"
-          >ยกเลิกแล้ว</span>
-          <span
-            v-else-if="scannerStore.lastScan.isNewScan === false"
-            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 border border-amber-200 text-amber-700 text-xs font-medium"
-          >ซ้ำ</span>
+          <span v-if="scannerStore.lastScan.cancelled" class="badge-zinc">ยกเลิกแล้ว</span>
+          <span v-else-if="scannerStore.lastScan.isNewScan === false" class="badge-amber">ซ้ำ</span>
           <span v-else class="badge-success">ใหม่</span>
 
-          <span class="text-[10px] text-zinc-400 flex-1">
-            {{ scannerStore.lastScan.data?.station?.name }}
-          </span>
+          <span class="text-[10px] text-zinc-400 flex-1">{{ scannerStore.lastScan.data?.station?.name }}</span>
           <span class="text-[10px] text-zinc-400">{{ formatTime(scannerStore.lastScan.timestamp) }}</span>
 
           <button
             v-if="!scannerStore.lastScan.cancelled && scannerStore.lastScan.scanId"
             @click="scannerStore.cancelScan(scannerStore.lastScan)"
             :disabled="scannerStore.cancellingId === scannerStore.lastScan.scanId"
-            class="shrink-0 px-2 py-0.5 rounded-lg text-[11px] font-medium border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-40 transition-all"
+            class="shrink-0 px-2 py-0.5 rounded-lg text-[11px] font-medium disabled:opacity-40 transition-all"
+            style="color:#FF5151; border:1px solid #fecaca;"
           >
             {{ scannerStore.cancellingId === scannerStore.lastScan.scanId ? '...' : 'ยกเลิก' }}
           </button>
         </div>
 
-        <!-- Patient info -->
         <div class="px-3 pb-2.5 space-y-0.5">
-          <p
-            class="font-semibold text-sm"
-            :class="scannerStore.lastScan.cancelled ? 'text-zinc-400 line-through' : 'text-zinc-800'"
-          >
+          <p class="font-semibold text-sm" :class="scannerStore.lastScan.cancelled ? 'text-zinc-400 line-through' : 'text-[#09090b]'">
             {{ scannerStore.lastScan.patientName }}
           </p>
           <div class="flex items-center gap-3 flex-wrap">
-            <span v-if="scannerStore.lastScan.data?.patient?.hn" class="text-[11px] text-zinc-500">
-              HN: {{ scannerStore.lastScan.data.patient.hn }}
-            </span>
-            <span v-if="scannerStore.lastScan.data?.membership?.cn" class="text-[11px] text-zinc-500">
-              CN: {{ scannerStore.lastScan.data.membership.cn }}
-            </span>
+            <span v-if="scannerStore.lastScan.data?.patient?.hn" class="text-[11px] text-zinc-500">HN: {{ scannerStore.lastScan.data.patient.hn }}</span>
+            <span v-if="scannerStore.lastScan.data?.membership?.cn" class="text-[11px] text-zinc-500">CN: {{ scannerStore.lastScan.data.membership.cn }}</span>
           </div>
-          <p
-            v-if="scannerStore.lastScan.data?.membership?.department || scannerStore.lastScan.data?.membership?.companyName"
-            class="text-[11px] text-zinc-400 truncate"
-          >
+          <p v-if="scannerStore.lastScan.data?.membership?.department || scannerStore.lastScan.data?.membership?.companyName"
+            class="text-[11px] text-zinc-400 truncate">
             {{ [scannerStore.lastScan.data?.membership?.department, scannerStore.lastScan.data?.membership?.companyName].filter(Boolean).join(' · ') }}
           </p>
           <p v-if="scannerStore.lastScan.message" class="text-[11px] text-zinc-500 leading-snug pt-0.5">
@@ -250,37 +201,31 @@
           ประวัติ
           <span v-if="scannerStore.scanHistory.length" class="normal-case text-zinc-300 ml-0.5">· {{ scannerStore.scanHistory.length }}</span>
         </p>
-        <button
-          v-if="scannerStore.scanHistory.length"
+        <button v-if="scannerStore.scanHistory.length"
           @click="scannerStore.clearHistory"
-          class="text-[11px] text-zinc-400 hover:text-zinc-600 transition-colors"
-        >
-          ล้าง
-        </button>
+          class="text-[11px] text-zinc-400 hover:text-zinc-600 transition-colors">ล้าง</button>
       </div>
 
-      <div v-if="!scannerStore.scanHistory.length" class="flex items-center gap-2 text-zinc-300 py-0.5">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      <div v-if="!scannerStore.scanHistory.length" class="flex items-center gap-2 py-0.5">
+        <svg class="w-4 h-4 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
         </svg>
         <span class="text-xs text-zinc-400">ไม่มีประวัติ</span>
       </div>
 
       <div v-else class="space-y-0.5 max-h-48 overflow-y-auto">
         <div
-          v-for="(scan, i) in scannerStore.recentScans"
-          :key="i"
+          v-for="(scan, i) in scannerStore.recentScans" :key="i"
           class="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors group"
-          :class="scan.cancelled ? 'opacity-50' : scan.success ? 'hover:bg-zinc-50' : 'bg-red-50/60'"
+          :class="scan.cancelled ? 'opacity-50' : scan.success ? 'hover:bg-zinc-50' : ''"
+          :style="!scan.success && !scan.cancelled ? 'background:#fff5f5;' : ''"
         >
-          <div
-            class="w-1.5 h-1.5 rounded-full shrink-0"
-            :class="scan.cancelled ? 'bg-zinc-300' : scan.success ? 'bg-[#10b981]' : 'bg-[#ef4444]'"
-          ></div>
-          <span
-            class="flex-1 truncate text-xs"
-            :class="scan.cancelled ? 'text-zinc-400 line-through' : scan.success ? 'text-zinc-700' : 'text-red-600'"
-          >
+          <div class="w-1.5 h-1.5 rounded-full shrink-0"
+            :style="scan.cancelled ? 'background:#d4d4d8;' : scan.success ? 'background:#71DD37;' : 'background:#FF5151;'">
+          </div>
+          <span class="flex-1 truncate text-xs"
+            :class="scan.cancelled ? 'text-zinc-400 line-through' : scan.success ? 'text-zinc-700' : ''"
+            :style="!scan.success && !scan.cancelled ? 'color:#FF5151;' : ''">
             {{ scan.patientName || scan.error }}
           </span>
           <span class="text-[10px] text-zinc-400 shrink-0">{{ formatTime(scan.timestamp, true) }}</span>
@@ -288,7 +233,8 @@
             v-if="scan.success && !scan.cancelled && scan.scanId"
             @click="scannerStore.cancelScan(scan)"
             :disabled="scannerStore.cancellingId === scan.scanId"
-            class="shrink-0 opacity-0 group-hover:opacity-100 px-1.5 py-0.5 rounded text-[10px] font-medium border border-red-200 text-red-400 hover:bg-red-50 disabled:opacity-40 transition-all"
+            class="shrink-0 opacity-0 group-hover:opacity-100 px-1.5 py-0.5 rounded text-[10px] font-medium disabled:opacity-40 transition-all"
+            style="color:#FF5151; border:1px solid #fecaca;"
           >
             {{ scannerStore.cancellingId === scan.scanId ? '...' : 'ยกเลิก' }}
           </button>
@@ -296,21 +242,55 @@
       </div>
     </div>
 
+    <!-- Log Panel -->
+    <div class="card">
+      <div class="flex items-center justify-between cursor-pointer select-none" @click="showLogs = !showLogs">
+        <p class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+          logs
+          <span v-if="logStore.entries.length" class="normal-case font-normal text-zinc-300">· {{ logStore.entries.length }}</span>
+          <span v-if="logStore.errorCount"
+            class="px-1.5 py-0.5 rounded text-[9px] font-bold"
+            style="background:#fff5f5; color:#FF5151; border:1px solid #fecaca;">
+            {{ logStore.errorCount }} err
+          </span>
+        </p>
+        <div class="flex items-center gap-2">
+          <button v-if="logStore.entries.length && showLogs" @click.stop="logStore.clear()"
+            class="text-[11px] text-zinc-400 hover:text-zinc-600 transition-colors">ล้าง</button>
+          <svg class="w-3.5 h-3.5 text-zinc-300 transition-transform duration-200"
+            :class="showLogs ? 'rotate-180' : ''"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </div>
+      </div>
+
+      <div v-if="showLogs" class="mt-2 max-h-52 overflow-y-auto space-y-0">
+        <div v-if="!logStore.entries.length" class="text-xs text-zinc-400 py-0.5">ไม่มี logs</div>
+        <div v-for="entry in logStore.entries" :key="entry.id"
+          class="py-1.5 border-b border-zinc-50 last:border-0">
+          <div class="flex items-start gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full shrink-0 mt-1" :style="logDotColor(entry.level)"></span>
+            <span class="text-[10px] text-zinc-400 shrink-0 tabular-nums font-mono">{{ formatLogTime(entry.time) }}</span>
+            <span class="text-[11px] flex-1 min-w-0 break-all leading-snug" :style="logTextColor(entry.level)">{{ entry.message }}</span>
+          </div>
+          <div v-if="entry.detail"
+            class="ml-3.5 mt-0.5 text-[10px] text-zinc-400 break-all leading-tight font-mono whitespace-pre-wrap">{{ entry.detail }}</div>
+        </div>
+      </div>
+    </div>
+
     <!-- Scan / Cancel panel -->
-    <div
-      class="card transition-all duration-300"
-      :class="scannerStore.cancelMode ? 'border-red-200' : 'border-zinc-200'"
-    >
-      <!-- Toggles row -->
+    <div class="card transition-all duration-300"
+      :style="scannerStore.cancelMode ? 'border-color:#fecaca;' : ''">
+
       <div class="flex gap-2 mb-3">
         <!-- Scan / Cancel -->
-        <div class="flex gap-0.5 p-1 bg-zinc-100 rounded-xl flex-1">
+        <div class="flex gap-0.5 p-1 rounded-xl flex-1 bg-zinc-100">
           <button
             @click="scannerStore.cancelMode && scannerStore.toggleCancelMode()"
             class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
-            :class="!scannerStore.cancelMode
-              ? 'bg-white text-[#09090b] shadow-sm'
-              : 'text-zinc-400 hover:text-zinc-500'"
+            :class="!scannerStore.cancelMode ? 'bg-white text-[#09090b] shadow-sm' : 'text-zinc-400 hover:text-zinc-600'"
           >
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -320,10 +300,9 @@
           </button>
           <button
             @click="!scannerStore.cancelMode && scannerStore.toggleCancelMode()"
-            class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
-            :class="scannerStore.cancelMode
-              ? 'bg-red-500 text-white shadow-sm'
-              : 'text-zinc-400 hover:text-zinc-500'"
+            class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 text-white"
+            :class="!scannerStore.cancelMode && 'text-zinc-400 hover:text-zinc-600'"
+            :style="scannerStore.cancelMode ? 'background:#FF5151;' : 'color:#a1a1aa;'"
           >
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -334,26 +313,22 @@
         </div>
 
         <!-- Auto / Manual -->
-        <div class="flex gap-0.5 p-1 bg-zinc-100 rounded-xl flex-1">
+        <div class="flex gap-0.5 p-1 rounded-xl flex-1 bg-zinc-100">
           <button
             @click="authStore.scanInputMode !== 'auto' && authStore.toggleScanInputMode()"
             class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
-            :class="authStore.scanInputMode === 'auto'
-              ? 'bg-white text-[#09090b] shadow-sm'
-              : 'text-zinc-400 hover:text-zinc-500'"
+            :class="authStore.scanInputMode === 'auto' ? 'bg-white text-[#09090b] shadow-sm' : 'text-zinc-400 hover:text-zinc-600'"
           >
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
             </svg>
             Auto
           </button>
           <button
             @click="authStore.scanInputMode !== 'manual' && authStore.toggleScanInputMode()"
             class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
-            :class="authStore.scanInputMode === 'manual'
-              ? 'bg-blue-500 text-white shadow-sm'
-              : 'text-zinc-400 hover:text-zinc-500'"
+            :class="authStore.scanInputMode !== 'manual' && 'text-zinc-400 hover:text-zinc-600'"
+            :style="authStore.scanInputMode === 'manual' ? 'background:#03C3EC; color:#fff;' : ''"
           >
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -364,13 +339,11 @@
         </div>
       </div>
 
-      <!-- Input + Action -->
       <div class="flex gap-2">
         <input
           v-model="testBarcode"
           type="text"
-          class="input flex-1 text-xs py-2 transition-all"
-          :class="scannerStore.cancelMode ? 'border-red-200 focus:border-red-400 focus:ring-red-400/30' : ''"
+          class="input flex-1 text-xs py-2"
           :placeholder="scannerStore.cancelMode ? 'สแกน/พิมพ์ barcode เพื่อยกเลิก' : 'พิมพ์หรือสแกน barcode'"
           @keydown.enter="runTestScan"
         />
@@ -378,9 +351,9 @@
           @click="runTestScan"
           :disabled="!testBarcode || isTestLoading"
           class="shrink-0 px-4 py-2 rounded-xl text-white text-xs font-semibold disabled:opacity-40 transition-all"
-          :class="scannerStore.cancelMode
-            ? 'bg-red-500 hover:bg-red-600'
-            : 'bg-[#9333ea] hover:bg-[#7e22ce]'"
+          :style="scannerStore.cancelMode
+            ? 'background:#FF5151;'
+            : 'background:#696CFF; box-shadow:0 2px 8px -3px rgba(105,108,255,0.5);'"
         >
           {{ isTestLoading ? '...' : scannerStore.cancelMode ? 'ยกเลิก' : 'สแกน' }}
         </button>
@@ -394,16 +367,18 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useScannerStore } from '../stores/scanner'
+import { useLogStore } from '../stores/log'
 
 const authStore = useAuthStore()
 const scannerStore = useScannerStore()
+const logStore = useLogStore()
 
-// auto mode = พร้อมเสมอ (stationId มาจาก barcode), manual = ต้องเลือก station ก่อน
 const isReady = computed(() =>
   authStore.scanInputMode === 'auto' || authStore.hasStations
 )
 
 const showStationSelect = ref(false)
+const showLogs = ref(false)
 const stations = ref([])
 const isLoadingStations = ref(false)
 const testBarcode = ref('')
@@ -451,6 +426,21 @@ function toggleStationPanel() {
   if (showStationSelect.value && stations.value.length === 0) loadStations()
 }
 
+function formatLogTime(t) {
+  const d = t instanceof Date ? t : new Date(t)
+  return d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
+function logDotColor(level) {
+  const map = { success: 'background:#71DD37;', error: 'background:#FF5151;', warn: 'background:#FFAB00;', info: 'background:#03C3EC;' }
+  return map[level] || 'background:#d4d4d8;'
+}
+
+function logTextColor(level) {
+  const map = { error: 'color:#FF5151;', warn: 'color:#92400e;' }
+  return map[level] || 'color:#3f3f46;'
+}
+
 function formatTime(ts, short = false) {
   if (!ts) return ''
   const d = new Date(ts)
@@ -461,6 +451,11 @@ function formatTime(ts, short = false) {
 onMounted(() => {
   scannerStore.setupIPCListeners()
   if (authStore.selectedStations.some(s => !s.name)) loadStations()
+
+  window.api.onLog((data) => {
+    logStore.add(data.level, data.message, data.detail)
+    if (data.level === 'error') showLogs.value = true
+  })
 })
 </script>
 

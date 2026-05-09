@@ -1,26 +1,33 @@
 <template>
-  <div class="min-h-screen bg-zinc-100">
-    <!-- Top-bar navigation -->
-    <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-zinc-200/60 px-4 h-12 flex items-center">
+  <div class="min-h-screen" style="background: #f4f4f6;">
+    <!-- Header -->
+    <header
+      class="sticky top-0 z-50 h-12 px-4 flex items-center"
+      style="background: rgba(255,255,255,0.85); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(9,9,11,0.07); box-shadow: 0 1px 0 rgba(9,9,11,0.04);"
+    >
       <div class="max-w-lg mx-auto w-full flex items-center justify-between">
         <!-- Brand -->
-        <div class="flex items-center gap-2">
-          <div class="w-6 h-6 rounded-lg bg-[#9333ea] flex items-center justify-center text-white text-xs font-bold shadow-sm shadow-purple-200">
-            S
-          </div>
-          <span class="text-sm font-semibold text-[#09090b] tracking-tight">SEMed Scanner</span>
+        <div class="flex items-center gap-2.5">
+          <div
+            class="w-7 h-7 rounded-xl flex items-center justify-center text-white text-xs font-bold"
+            style="background: linear-gradient(135deg, #696CFF, #5558e3); box-shadow: 0 2px 8px -2px rgba(105,108,255,0.5);"
+          >S</div>
+          <span class="text-sm font-semibold text-[#09090b] tracking-tight">SEMed <span class="font-normal text-zinc-400">Scanner</span></span>
         </div>
 
-        <!-- Right side -->
+        <!-- Right -->
         <div v-if="authStore.isAuthenticated" class="flex items-center gap-2">
-          <span class="text-xs text-zinc-400 hidden sm:block">{{ authStore.user?.name }}</span>
+          <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-50 border border-zinc-200/80">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span class="text-xs text-zinc-500 font-medium">{{ authStore.user?.name }}</span>
+          </div>
           <button
             @click="handleLogout"
             class="w-7 h-7 rounded-lg flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all"
             title="ออกจากระบบ"
           >
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
             </svg>
           </button>
         </div>
@@ -30,7 +37,7 @@
     <!-- Main -->
     <main class="max-w-lg mx-auto px-4 py-4">
       <div v-if="isInitializing" class="flex items-center justify-center py-20">
-        <div class="w-7 h-7 border-2 border-zinc-200 border-t-purple-500 rounded-full animate-spin"></div>
+        <div class="w-6 h-6 border-2 border-zinc-200 border-t-purple-500 rounded-full animate-spin"></div>
       </div>
       <template v-else>
         <LoginView v-if="!authStore.isAuthenticated" />

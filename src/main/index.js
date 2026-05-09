@@ -4,11 +4,22 @@ const notifier = require('node-notifier')
 
 const { saveConfig, clearConfig, getStationIds, getScanInputMode } = require('./store')
 const { playSound } = require('./sound')
-const { getMergedConfig, shouldOpenDevtools, isSoundEnabled } = require('./config')
+const { getMergedConfig, shouldOpenDevtools, isSoundEnabled, getApiBaseUrl } = require('./config')
 const { login, getStations, sendScanData, cancelScan, verifyToken } = require('./api')
 const { initScanner } = require('./scanner')
 
 let mainWindow
+
+function sendLog(level, message, detail = null) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('app:log', {
+      level,
+      message,
+      detail,
+      time: new Date().toISOString()
+    })
+  }
+}
 
 function createWindow() {
   const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev')
@@ -73,6 +84,8 @@ function notifySuccess(data) {
     })
   }
   
+  sendLog('success', `สแกนสำเร็จ: ${patientName}`, data?.station?.name ? `Station: ${data.station.name}` : null)
+
   // เล่นเสียง
   if (isSoundEnabled()) {
     playSound(data?.isNewScan === false ? 'duplicate' : 'success')
@@ -114,6 +127,11 @@ function notifyError(error) {
     }
   }
   
+  const errStatus = error.response?.status
+  const errDetail = error.response?.data?.message || error.response?.data?.error || error.message
+  const errBody = error.response?.data ? JSON.stringify(error.response.data) : null
+  sendLog('error', `${title}: ${message}${errStatus ? ` [${errStatus}]` : ''}`, errBody || errDetail)
+
   // เล่นเสียง error
   if (isSoundEnabled()) playSound('error')
 
@@ -269,13 +287,25 @@ ipcMain.handle('config:clear', async () => {
 })
 
 ipcMain.handle('auth:login', async (event, { email, password, rememberMe }) => {
+  const baseUrl = getApiBaseUrl()
+  sendLog('info', `Login: ${email}`, `API: ${baseUrl}`)
   try {
     const result = await login(email, password, rememberMe)
-    return JSON.parse(JSON.stringify(result))
+    const returnValue = JSON.parse(JSON.stringify(result))
+    if (returnValue.success !== false) {
+      sendLog('success', `Login สำเร็จ: ${result.data?.user?.name || email}`)
+    } else {
+      sendLog('error', 'Login ล้มเหลว', returnValue.message || JSON.stringify(returnValue))
+    }
+    return returnValue
   } catch (error) {
+    const status = error.response?.status
+    const apiMsg = error.response?.data?.message || error.response?.data?.error
+    const errMsg = apiMsg || error.message
+    sendLog('error', `Login Error${status ? ` (${status})` : ''}`, `${errMsg}\n${baseUrl}/auth/login\n${JSON.stringify(error.response?.data || {})}`)
     return {
       success: false,
-      message: error.response?.data?.message || error.message
+      message: errMsg
     }
   }
 })
@@ -283,18 +313,22 @@ ipcMain.handle('auth:login', async (event, { email, password, rememberMe }) => {
 ipcMain.handle('auth:verify', async () => {
   try {
     const result = await verifyToken()
+    sendLog('info', `Token OK: ${result.data?.user?.name || result.data?.name || ''}`)
     return JSON.parse(JSON.stringify({ success: true, data: result.data }))
   } catch (error) {
+    const status = error.response?.status
+    sendLog('warn', `Token verify ล้มเหลว${status ? ` (${status})` : ''}`, error.response?.data?.message || error.message)
     return {
       success: false,
       message: error.message,
-      status: error.response?.status
+      status
     }
   }
 })
 
 ipcMain.handle('scan:test', async (event, barcode) => {
   console.log(`🧪 Test scan triggered from UI: "${barcode}"`)
+  sendLog('info', `Manual scan: "${barcode}"`)
   await handleScan(barcode)
   return { success: true }
 })
@@ -323,8 +357,11 @@ ipcMain.handle('scan:set-cancel-mode', (event, enabled) => {
 ipcMain.handle('stations:get', async () => {
   try {
     const result = await getStations()
+    sendLog('info', `โหลดจุดตรวจ: ${result.data?.length || 0} รายการ`)
     return JSON.parse(JSON.stringify(result))
   } catch (error) {
+    const status = error.response?.status
+    sendLog('error', `โหลดจุดตรวจล้มเหลว${status ? ` (${status})` : ''}`, error.response?.data?.message || error.message)
     return { success: false, message: error.message }
   }
 })
@@ -336,6 +373,10 @@ ipcMain.handle('stations:get', async () => {
 app.whenReady().then(() => {
   createWindow()
   initScanner(handleScan)
+
+  mainWindow.webContents.once('did-finish-load', () => {
+    sendLog('info', 'แอปเริ่มต้นแล้ว', `API: ${getApiBaseUrl()}`)
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

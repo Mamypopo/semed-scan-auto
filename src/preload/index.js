@@ -81,10 +81,15 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.once('auth:expired', () => callback())
   },
 
+  onLog: (callback) => {
+    ipcRenderer.on('app:log', (_, data) => callback(data))
+  },
+
   removeAllListeners: () => {
     ipcRenderer.removeAllListeners('scan:success')
     ipcRenderer.removeAllListeners('scan:error')
     ipcRenderer.removeAllListeners('scan:lookup-request')
     ipcRenderer.removeAllListeners('auth:expired')
+    ipcRenderer.removeAllListeners('app:log')
   }
 })
