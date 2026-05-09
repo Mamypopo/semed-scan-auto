@@ -5,7 +5,8 @@ const store = new Store({
   defaults: {
     token: '',
     stationIds: '[]',
-    baseUrl: ''
+    baseUrl: '',
+    scanInputMode: 'auto'
   }
 })
 
@@ -25,16 +26,21 @@ const getStationId = () => {
 const getBaseUrl = () => store.get('baseUrl')
 const setBaseUrl = (baseUrl) => store.set('baseUrl', baseUrl)
 
+const getScanInputMode = () => store.get('scanInputMode') || 'auto'
+const setScanInputMode = (mode) => store.set('scanInputMode', mode)
+
 const getConfig = () => ({
   token: store.get('token'),
   stationIds: getStationIds(),
-  baseUrl: store.get('baseUrl')
+  baseUrl: store.get('baseUrl'),
+  scanInputMode: getScanInputMode()
 })
 
 const saveConfig = (config) => {
   if (config.token !== undefined) store.set('token', config.token)
   if (config.stationIds !== undefined) setStationIds(config.stationIds)
   if (config.baseUrl !== undefined) store.set('baseUrl', config.baseUrl)
+  if (config.scanInputMode !== undefined) setScanInputMode(config.scanInputMode)
 }
 
 const clearConfig = () => {
@@ -49,6 +55,8 @@ module.exports = {
   getStationId,
   getBaseUrl,
   setBaseUrl,
+  getScanInputMode,
+  setScanInputMode,
   getConfig,
   saveConfig,
   clearConfig

@@ -18,6 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref(null)
   const selectedStations = ref([])
   const isLoading = ref(false)
+  const scanInputMode = ref('auto')
   const isAuthenticated = computed(() => !!token.value)
   const hasStations = computed(() => selectedStations.value.length > 0)
 
@@ -30,6 +31,11 @@ export const useAuthStore = defineStore('auth', () => {
       token: token.value,
       stationIds: selectedStations.value.map(s => s.id)
     })
+  }
+
+  async function toggleScanInputMode() {
+    scanInputMode.value = scanInputMode.value === 'auto' ? 'manual' : 'auto'
+    await window.api.saveConfig({ scanInputMode: scanInputMode.value })
   }
 
   async function toggleStation(station) {
@@ -101,9 +107,9 @@ export const useAuthStore = defineStore('auth', () => {
         } : null
 
         if (Array.isArray(config.stationIds) && config.stationIds.length > 0) {
-          // stationIds เป็น array ของ id เท่านั้น ต้อง fetch names ทีหลังใน Dashboard
           selectedStations.value = config.stationIds.map(id => ({ id, name: '' }))
         }
+        if (config.scanInputMode) scanInputMode.value = config.scanInputMode
         return true
       }
       return false
@@ -130,10 +136,12 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     selectedStations,
     isLoading,
+    scanInputMode,
     isAuthenticated,
     hasStations,
     isStationSelected,
     toggleStation,
+    toggleScanInputMode,
     login,
     verifyToken,
     logout

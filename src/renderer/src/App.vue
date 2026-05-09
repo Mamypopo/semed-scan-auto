@@ -43,6 +43,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from './stores/auth'
+import Swal from 'sweetalert2'
 import { useScanner } from './composables/useScanner'
 import LoginView from './views/LoginView.vue'
 import DashboardView from './views/DashboardView.vue'
@@ -58,5 +59,16 @@ async function handleLogout() {
 onMounted(async () => {
   await authStore.verifyToken()
   isInitializing.value = false
+
+  window.api.onAuthExpired(async () => {
+    await authStore.logout()
+    Swal.fire({
+      icon: 'warning',
+      title: 'หมดอายุการใช้งาน',
+      text: 'กรุณาเข้าสู่ระบบใหม่',
+      confirmButtonText: 'ตกลง',
+      customClass: { popup: 'swal-app' }
+    })
+  })
 })
 </script>

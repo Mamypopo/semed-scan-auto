@@ -92,7 +92,6 @@ function initScanner(onScan) {
                 if (now - lastKeyTime > 2000 && buffer.length > 0) buffer = ''
                 lastKeyTime = now
                 buffer += ch
-                console.log(`[alt+num] code=${code} char="${ch}" buf="${buffer}"`)
               }
             }
             altHeld = false
@@ -102,9 +101,10 @@ function initScanner(onScan) {
         }
 
         // Collect numpad digits while Alt is held (Alt+NumPad sequence)
+        // Suppress these keystrokes so they don't reach any focused input field
         if (altHeld && isDown && vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9) {
           altBuf += String(vk - VK_NUMPAD0)
-          return CallNextHookEx(hhook, nCode, wParam, lParam)
+          return 1
         }
 
         // ── Normal key processing ─────────────────────────
@@ -124,10 +124,7 @@ function initScanner(onScan) {
             }
           } else {
             const ch = vkToChar(vk)
-            if (ch) {
-              buffer += ch
-              console.log(`[key] vk=0x${vk.toString(16)} char="${ch}" buf="${buffer}"`)
-            }
+            if (ch) buffer += ch
           }
         }
       }

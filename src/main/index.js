@@ -2,9 +2,10 @@ const { app, BrowserWindow, ipcMain, Notification } = require('electron')
 const path = require('path')
 const notifier = require('node-notifier')
 
-const { saveConfig, clearConfig, getStationIds } = require('./store')
+const { saveConfig, clearConfig, getStationIds, getScanInputMode } = require('./store')
+const { playSound } = require('./sound')
 const { getMergedConfig, shouldOpenDevtools, isSoundEnabled } = require('./config')
-const { login, getStations, sendScanData, verifyToken } = require('./api')
+const { login, getStations, sendScanData, cancelScan, verifyToken } = require('./api')
 const { initScanner } = require('./scanner')
 
 let mainWindow
@@ -72,6 +73,11 @@ function notifySuccess(data) {
     })
   }
   
+  // เล่นเสียง
+  if (isSoundEnabled()) {
+    playSound(data?.isNewScan === false ? 'duplicate' : 'success')
+  }
+
   // ส่งไปยัง Renderer (Vue)
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('scan:success', {
@@ -89,35 +95,43 @@ function notifySuccess(data) {
 function notifyError(error) {
   let message = error.message
   let title = '❌ เกิดข้อผิดพลาด'
-  
+
   if (error.response) {
     const status = error.response.status
+    if (status === 401) {
+      console.warn('🔒 Token หมดอายุ — kick renderer ออก')
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('auth:expired')
+      }
+      return
+    }
     if (status === 403) {
       title = '⛔ ไม่มีสิทธิ์'
       message = 'คุณไม่มีสิทธิ์ SCAN_CREATE'
-    } else if (status === 401) {
-      title = '🔒 หมดอายุ'
-      message = 'กรุณาเข้าสู่ระบบใหม่'
     } else if (status === 404) {
       title = '❌ ไม่พบข้อมูล'
       message = 'ไม่พบผู้ป่วยจากบาร์โค้ดนี้'
     }
   }
   
+  // เล่นเสียง error
+  if (isSoundEnabled()) playSound('error')
+
   // Electron Native Notification
   if (Notification.isSupported()) {
     new Notification({
       title,
       body: message,
       icon: path.join(__dirname, '../../assets/icon.png'),
-      silent: !isSoundEnabled()
+      silent: true
     }).show()
   } else {
     notifier.notify({
       title,
       message,
       icon: path.join(__dirname, '../../assets/icon.png'),
-      sound: isSoundEnabled()
+      sound: false,
+      wait: false
     })
   }
   
@@ -138,8 +152,12 @@ function notifyError(error) {
 
 let lastScanBarcode = ''
 let lastScanTime = 0
+let isCancelMode = false
 
 async function handleScan(barcode) {
+  // ออกจาก koffi hook callback context ก่อน เพื่อให้ Electron API ทำงานได้ปลอดภัย
+  await new Promise(resolve => setImmediate(resolve))
+
   // ป้องกัน double scan (global + renderer ทำงานพร้อมกัน)
   const now = Date.now()
   if (barcode === lastScanBarcode && now - lastScanTime < 1000) return
@@ -148,17 +166,47 @@ async function handleScan(barcode) {
 
   let cn = barcode
   let stationIds = getStationIds()
+  const inputMode = getScanInputMode() // 'auto' | 'manual'
 
-  // Parse format CN.stationId เช่น "691220014.16"
+  // แยก CN กับ stationId ที่อาจฝังในบาร์โค้ด เช่น "691220014.16"
   if (barcode.includes('.')) {
     const parts = barcode.split('.')
     const embeddedStationId = parseInt(parts[parts.length - 1])
     if (!isNaN(embeddedStationId)) {
       cn = parts.slice(0, -1).join('.')
-      stationIds = [embeddedStationId]
-      console.log(`🔍 Parsed barcode: cn="${cn}" stationId=${embeddedStationId}`)
+      if (inputMode === 'auto') {
+        // ถ้าเลือก station ไว้ ต้องตรงกับ embedded stationId ถึงจะยิงได้
+        const selectedIds = stationIds
+        if (selectedIds.length > 0 && !selectedIds.includes(embeddedStationId)) {
+          console.warn(`⛔ stationId mismatch: barcode=${embeddedStationId} selected=${JSON.stringify(selectedIds)}`)
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('scan:error', {
+              success: false,
+              error: `บาร์โค้ดนี้เป็นของจุดตรวจ #${embeddedStationId} ไม่ตรงกับที่เลือก`,
+              timestamp: new Date().toISOString()
+            })
+          }
+          return
+        }
+        stationIds = [embeddedStationId]
+        console.log(`🔍 [Auto] cn="${cn}" stationId=${embeddedStationId}`)
+      } else {
+        // Manual: ใช้ stationIds จาก UI, ส่งแค่ CN ที่ตัด suffix ออกแล้ว
+        console.log(`🔍 [Manual] cn="${cn}" stations=${JSON.stringify(stationIds)}`)
+      }
     }
   }
+
+  // Cancel mode: ส่ง CN ไป renderer ให้ค้นหาและยืนยันยกเลิก
+  if (isCancelMode) {
+    console.log(`🔍 Cancel mode — lookup cn="${cn}"`)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('scan:lookup-request', { cn, timestamp: new Date().toISOString() })
+    }
+    return
+  }
+
+  console.log(`🔎 mode="${inputMode}" stationIds=${JSON.stringify(stationIds)} cn="${cn}"`)
 
   if (!stationIds.length) {
     if (Notification.isSupported()) {
@@ -248,6 +296,27 @@ ipcMain.handle('auth:verify', async () => {
 ipcMain.handle('scan:test', async (event, barcode) => {
   console.log(`🧪 Test scan triggered from UI: "${barcode}"`)
   await handleScan(barcode)
+  return { success: true }
+})
+
+ipcMain.handle('scan:cancel', async (event, scanId) => {
+  try {
+    const result = await cancelScan(scanId)
+    console.log(`✅ ยกเลิก scan #${scanId} สำเร็จ`)
+    return { success: true, data: result.data }
+  } catch (error) {
+    console.error('❌ ยกเลิก scan ล้มเหลว:', error.response?.data || error.message)
+    return {
+      success: false,
+      message: error.response?.data?.message || error.message,
+      status: error.response?.status
+    }
+  }
+})
+
+ipcMain.handle('scan:set-cancel-mode', (event, enabled) => {
+  isCancelMode = !!enabled
+  console.log(`🔄 Cancel mode: ${isCancelMode ? 'ON' : 'OFF'}`)
   return { success: true }
 })
 

@@ -87,7 +87,7 @@
 
     <!-- Warning: no station -->
     <div
-      v-if="!showStationSelect && !authStore.hasStations"
+      v-if="!showStationSelect && !isReady"
       class="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100"
     >
       <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -102,7 +102,7 @@
       <!-- Purple glow bg -->
       <div
         class="absolute inset-0 pointer-events-none transition-opacity duration-500 rounded-2xl overflow-hidden"
-        :class="authStore.hasStations ? 'opacity-100' : 'opacity-0'"
+        :class="isReady ? 'opacity-100' : 'opacity-0'"
       >
         <div class="absolute -top-8 left-1/2 -translate-x-1/2 w-40 h-20 rounded-full bg-purple-100 blur-3xl"></div>
       </div>
@@ -111,18 +111,16 @@
         <!-- Scanner icon -->
         <div class="relative shrink-0">
           <div
-            v-if="authStore.hasStations"
+            v-if="isReady"
             class="absolute inset-1 rounded-xl bg-purple-400/20 blur-md animate-pulse"
           ></div>
           <div
             class="relative w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm transition-all"
-            :class="authStore.hasStations
-              ? 'bg-[#9333ea] shadow-purple-200'
-              : 'bg-zinc-100'"
+            :class="isReady ? 'bg-[#9333ea] shadow-purple-200' : 'bg-zinc-100'"
           >
             <svg
               class="w-7 h-7 transition-colors"
-              :class="authStore.hasStations ? 'text-white' : 'text-zinc-400'"
+              :class="isReady ? 'text-white' : 'text-zinc-400'"
               fill="none" stroke="currentColor" viewBox="0 0 24 24"
             >
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -134,20 +132,35 @@
         <!-- Status text -->
         <div class="flex-1">
           <p class="font-semibold text-[#09090b] text-sm">
-            {{ authStore.hasStations ? 'พร้อมรับการสแกน' : 'ยังไม่พร้อม' }}
+            {{ isReady ? 'พร้อมรับการสแกน' : 'ยังไม่พร้อม' }}
           </p>
           <p class="text-xs text-zinc-400 mt-0.5">
-            {{ authStore.hasStations ? 'สแกนบาร์โค้ดผู้ป่วยได้เลย' : 'เลือกจุดตรวจก่อน' }}
+            {{ isReady ? 'สแกนบาร์โค้ดผู้ป่วยได้เลย' : 'เลือกจุดตรวจก่อน' }}
           </p>
         </div>
 
-        <!-- Mode pill -->
-        <div class="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-200 bg-zinc-50">
-          <span
-            class="w-1.5 h-1.5 rounded-full transition-colors"
-            :class="authStore.hasStations ? 'bg-[#10b981] animate-pulse' : 'bg-zinc-300'"
-          ></span>
-          <span class="text-[11px] font-medium text-zinc-500">Checkup</span>
+        <!-- Mode pills -->
+        <div class="shrink-0 flex flex-col items-end gap-1.5">
+          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-200 bg-zinc-50">
+            <span
+              class="w-1.5 h-1.5 rounded-full transition-colors"
+              :class="isReady ? 'bg-[#10b981] animate-pulse' : 'bg-zinc-300'"
+            ></span>
+            <span class="text-[11px] font-medium text-zinc-500">Checkup</span>
+          </div>
+          <button
+            @click="authStore.toggleScanInputMode()"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium transition-all"
+            :class="authStore.scanInputMode === 'manual'
+              ? 'bg-blue-50 border-blue-200 text-blue-600'
+              : 'bg-zinc-50 border-zinc-200 text-zinc-500'"
+          >
+            <span
+              class="w-1.5 h-1.5 rounded-full"
+              :class="authStore.scanInputMode === 'manual' ? 'bg-blue-500' : 'bg-zinc-300'"
+            ></span>
+            {{ authStore.scanInputMode === 'manual' ? 'Manual' : 'Auto' }}
+          </button>
         </div>
       </div>
     </div>
@@ -156,43 +169,90 @@
     <div class="card">
       <p class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-2">ผลล่าสุด</p>
 
-      <div v-if="!scannerStore.lastScan" class="flex items-center gap-2 text-zinc-300 py-0.5">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-        </svg>
+      <div v-if="!scannerStore.lastScan" class="flex items-center gap-2 py-0.5">
         <span class="text-xs text-zinc-400">ยังไม่มีการสแกน</span>
       </div>
 
+      <!-- Error -->
       <div
-        v-else
-        class="flex items-center gap-3 px-3 py-2.5 rounded-xl"
-        :class="scannerStore.lastScan.success ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100'"
+        v-else-if="!scannerStore.lastScan.success"
+        class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-red-50 border border-red-100"
       >
-        <div
-          class="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center"
-          :class="scannerStore.lastScan.success ? 'bg-[#10b981]/10' : 'bg-[#ef4444]/10'"
-        >
-          <svg
-            class="w-4 h-4"
-            :class="scannerStore.lastScan.success ? 'text-[#10b981]' : 'text-[#ef4444]'"
-            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-          >
-            <path v-if="scannerStore.lastScan.success" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-            <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+        <div class="w-8 h-8 rounded-xl shrink-0 flex items-center justify-center bg-red-100">
+          <svg class="w-4 h-4 text-[#ef4444]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </div>
         <div class="flex-1 min-w-0">
-          <p
-            class="font-semibold text-sm truncate"
-            :class="scannerStore.lastScan.success ? 'text-emerald-800' : 'text-red-700'"
-          >
-            {{ scannerStore.lastScan.patientName || scannerStore.lastScan.error }}
-          </p>
+          <p class="font-semibold text-sm text-red-700">{{ scannerStore.lastScan.error }}</p>
           <p class="text-[10px] text-zinc-400 mt-0.5">{{ formatTime(scannerStore.lastScan.timestamp) }}</p>
         </div>
-        <span :class="scannerStore.lastScan.success ? 'badge-success' : 'badge-danger'">
-          {{ scannerStore.lastScan.success ? 'สำเร็จ' : 'ผิดพลาด' }}
-        </span>
+        <span class="badge-danger">ผิดพลาด</span>
+      </div>
+
+      <!-- Success: Patient info card -->
+      <div
+        v-else
+        class="rounded-xl border overflow-hidden transition-all"
+        :class="scannerStore.lastScan.cancelled
+          ? 'border-zinc-200 bg-zinc-50'
+          : scannerStore.lastScan.isNewScan === false
+            ? 'border-amber-200 bg-amber-50'
+            : 'border-emerald-200 bg-emerald-50'"
+      >
+        <!-- Top row: badges + cancel -->
+        <div class="flex items-center gap-2 px-3 pt-2.5 pb-1.5">
+          <span
+            v-if="scannerStore.lastScan.cancelled"
+            class="badge-zinc"
+          >ยกเลิกแล้ว</span>
+          <span
+            v-else-if="scannerStore.lastScan.isNewScan === false"
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 border border-amber-200 text-amber-700 text-xs font-medium"
+          >ซ้ำ</span>
+          <span v-else class="badge-success">ใหม่</span>
+
+          <span class="text-[10px] text-zinc-400 flex-1">
+            {{ scannerStore.lastScan.data?.station?.name }}
+          </span>
+          <span class="text-[10px] text-zinc-400">{{ formatTime(scannerStore.lastScan.timestamp) }}</span>
+
+          <button
+            v-if="!scannerStore.lastScan.cancelled && scannerStore.lastScan.scanId"
+            @click="scannerStore.cancelScan(scannerStore.lastScan)"
+            :disabled="scannerStore.cancellingId === scannerStore.lastScan.scanId"
+            class="shrink-0 px-2 py-0.5 rounded-lg text-[11px] font-medium border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-40 transition-all"
+          >
+            {{ scannerStore.cancellingId === scannerStore.lastScan.scanId ? '...' : 'ยกเลิก' }}
+          </button>
+        </div>
+
+        <!-- Patient info -->
+        <div class="px-3 pb-2.5 space-y-0.5">
+          <p
+            class="font-semibold text-sm"
+            :class="scannerStore.lastScan.cancelled ? 'text-zinc-400 line-through' : 'text-zinc-800'"
+          >
+            {{ scannerStore.lastScan.patientName }}
+          </p>
+          <div class="flex items-center gap-3 flex-wrap">
+            <span v-if="scannerStore.lastScan.data?.patient?.hn" class="text-[11px] text-zinc-500">
+              HN: {{ scannerStore.lastScan.data.patient.hn }}
+            </span>
+            <span v-if="scannerStore.lastScan.data?.membership?.cn" class="text-[11px] text-zinc-500">
+              CN: {{ scannerStore.lastScan.data.membership.cn }}
+            </span>
+          </div>
+          <p
+            v-if="scannerStore.lastScan.data?.membership?.department || scannerStore.lastScan.data?.membership?.companyName"
+            class="text-[11px] text-zinc-400 truncate"
+          >
+            {{ [scannerStore.lastScan.data?.membership?.department, scannerStore.lastScan.data?.membership?.companyName].filter(Boolean).join(' · ') }}
+          </p>
+          <p v-if="scannerStore.lastScan.message" class="text-[11px] text-zinc-500 leading-snug pt-0.5">
+            {{ scannerStore.lastScan.message }}
+          </p>
+        </div>
       </div>
     </div>
 
@@ -219,42 +279,82 @@
         <span class="text-xs text-zinc-400">ไม่มีประวัติ</span>
       </div>
 
-      <div v-else class="space-y-0.5 max-h-40 overflow-y-auto">
+      <div v-else class="space-y-0.5 max-h-48 overflow-y-auto">
         <div
           v-for="(scan, i) in scannerStore.recentScans"
           :key="i"
-          class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-colors"
-          :class="scan.success ? 'hover:bg-zinc-50' : 'bg-red-50/60'"
+          class="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors group"
+          :class="scan.cancelled ? 'opacity-50' : scan.success ? 'hover:bg-zinc-50' : 'bg-red-50/60'"
         >
           <div
             class="w-1.5 h-1.5 rounded-full shrink-0"
-            :class="scan.success ? 'bg-[#10b981]' : 'bg-[#ef4444]'"
+            :class="scan.cancelled ? 'bg-zinc-300' : scan.success ? 'bg-[#10b981]' : 'bg-[#ef4444]'"
           ></div>
-          <span class="flex-1 truncate text-xs" :class="scan.success ? 'text-zinc-700' : 'text-red-600'">
+          <span
+            class="flex-1 truncate text-xs"
+            :class="scan.cancelled ? 'text-zinc-400 line-through' : scan.success ? 'text-zinc-700' : 'text-red-600'"
+          >
             {{ scan.patientName || scan.error }}
           </span>
           <span class="text-[10px] text-zinc-400 shrink-0">{{ formatTime(scan.timestamp, true) }}</span>
+          <button
+            v-if="scan.success && !scan.cancelled && scan.scanId"
+            @click="scannerStore.cancelScan(scan)"
+            :disabled="scannerStore.cancellingId === scan.scanId"
+            class="shrink-0 opacity-0 group-hover:opacity-100 px-1.5 py-0.5 rounded text-[10px] font-medium border border-red-200 text-red-400 hover:bg-red-50 disabled:opacity-40 transition-all"
+          >
+            {{ scannerStore.cancellingId === scan.scanId ? '...' : 'ยกเลิก' }}
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Debug Panel (dev only) -->
-    <div class="card border-dashed border-zinc-300 bg-zinc-50/50">
-      <p class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-2">🧪 ทดสอบ (Dev)</p>
+    <!-- Scan / Cancel panel -->
+    <div
+      class="card transition-all duration-200"
+      :class="scannerStore.cancelMode
+        ? 'border-red-200 bg-red-50/40'
+        : 'border-dashed border-zinc-300 bg-zinc-50/50'"
+    >
+      <!-- Header row with mode toggle -->
+      <div class="flex items-center justify-between mb-2.5">
+        <p class="text-[10px] font-semibold uppercase tracking-widest"
+           :class="scannerStore.cancelMode ? 'text-red-400' : 'text-zinc-400'">
+          {{ scannerStore.cancelMode ? 'โหมดยกเลิก' : 'สแกนด้วยมือ' }}
+        </p>
+        <button
+          @click="scannerStore.toggleCancelMode()"
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all"
+          :class="scannerStore.cancelMode
+            ? 'bg-red-100 border-red-200 text-red-600 hover:bg-red-200'
+            : 'bg-white border-zinc-200 text-zinc-500 hover:border-zinc-300'"
+        >
+          <span
+            class="w-1.5 h-1.5 rounded-full transition-colors"
+            :class="scannerStore.cancelMode ? 'bg-red-500 animate-pulse' : 'bg-zinc-300'"
+          ></span>
+          {{ scannerStore.cancelMode ? 'เปิดอยู่' : 'โหมดยกเลิก' }}
+        </button>
+      </div>
+
       <div class="flex gap-2">
         <input
           v-model="testBarcode"
           type="text"
-          class="input flex-1 text-xs py-2"
-          placeholder="พิมพ์ barcode แล้วกด Test"
+          class="input flex-1 text-xs py-2 transition-all"
+          :class="scannerStore.cancelMode ? 'border-red-200 focus:border-red-400 focus:ring-red-400/30' : ''"
+          :placeholder="scannerStore.cancelMode ? 'สแกน/พิมพ์ barcode เพื่อยกเลิก' : 'พิมพ์หรือสแกน barcode'"
           @keydown.enter="runTestScan"
         />
         <button
           @click="runTestScan"
           :disabled="!testBarcode || isTestLoading"
-          class="shrink-0 px-3 py-2 rounded-xl bg-[#9333ea] text-white text-xs font-semibold disabled:opacity-40 transition-all hover:bg-[#7e22ce]"
+          class="shrink-0 px-3 py-2 rounded-xl text-white text-xs font-semibold disabled:opacity-40 transition-all"
+          :class="scannerStore.cancelMode
+            ? 'bg-red-500 hover:bg-red-600'
+            : 'bg-[#9333ea] hover:bg-[#7e22ce]'"
         >
-          {{ isTestLoading ? '...' : 'Test' }}
+          {{ isTestLoading ? '...' : scannerStore.cancelMode ? 'ยกเลิก' : 'สแกน' }}
         </button>
       </div>
     </div>
@@ -263,12 +363,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useScannerStore } from '../stores/scanner'
 
 const authStore = useAuthStore()
 const scannerStore = useScannerStore()
+
+// auto mode = พร้อมเสมอ (stationId มาจาก barcode), manual = ต้องเลือก station ก่อน
+const isReady = computed(() =>
+  authStore.scanInputMode === 'auto' || authStore.hasStations
+)
 
 const showStationSelect = ref(false)
 const stations = ref([])

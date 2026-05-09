@@ -71,9 +71,20 @@ contextBridge.exposeInMainWorld('api', {
    * ลบ event listener (สำหรับ cleanup)
    */
   testScan: (barcode) => ipcRenderer.invoke('scan:test', barcode),
+  cancelScan: (scanId) => ipcRenderer.invoke('scan:cancel', scanId),
+  setCancelMode: (enabled) => ipcRenderer.invoke('scan:set-cancel-mode', enabled),
+  onCancelLookup: (callback) => {
+    ipcRenderer.on('scan:lookup-request', (event, data) => callback(data))
+  },
+
+  onAuthExpired: (callback) => {
+    ipcRenderer.once('auth:expired', () => callback())
+  },
 
   removeAllListeners: () => {
     ipcRenderer.removeAllListeners('scan:success')
     ipcRenderer.removeAllListeners('scan:error')
+    ipcRenderer.removeAllListeners('scan:lookup-request')
+    ipcRenderer.removeAllListeners('auth:expired')
   }
 })

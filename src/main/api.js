@@ -38,7 +38,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response) {
-      // 403 Forbidden - ไม่มีสิทธิ์ SCAN_CREATE
       if (error.response.status === 403) {
         console.error('RBAC Error: ไม่มีสิทธิ์ SCAN_CREATE')
       }
@@ -113,6 +112,15 @@ async function sendScanData(barcode, stationId) {
 }
 
 /**
+ * ยกเลิก scan ที่ส่งไปแล้ว
+ * @param {number|string} scanId - ID ของ scan record
+ * @returns {Promise}
+ */
+async function cancelScan(scanId) {
+  return api.delete(`/scan/${scanId}`)
+}
+
+/**
  * เช็คว่า token ยังใช้งานได้หรือไม่ (เรียก /auth/me)
  * @returns {Promise}
  */
@@ -126,5 +134,6 @@ module.exports = {
   login,
   getStations,
   sendScanData,
+  cancelScan,
   verifyToken
 }
