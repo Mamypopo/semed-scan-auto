@@ -139,8 +139,8 @@
           </p>
         </div>
 
-        <!-- Mode pills -->
-        <div class="shrink-0 flex flex-col items-end gap-1.5">
+        <!-- Mode pill -->
+        <div class="shrink-0">
           <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-zinc-200 bg-zinc-50">
             <span
               class="w-1.5 h-1.5 rounded-full transition-colors"
@@ -148,19 +148,6 @@
             ></span>
             <span class="text-[11px] font-medium text-zinc-500">Checkup</span>
           </div>
-          <button
-            @click="authStore.toggleScanInputMode()"
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium transition-all"
-            :class="authStore.scanInputMode === 'manual'
-              ? 'bg-blue-50 border-blue-200 text-blue-600'
-              : 'bg-zinc-50 border-zinc-200 text-zinc-500'"
-          >
-            <span
-              class="w-1.5 h-1.5 rounded-full"
-              :class="authStore.scanInputMode === 'manual' ? 'bg-blue-500' : 'bg-zinc-300'"
-            ></span>
-            {{ authStore.scanInputMode === 'manual' ? 'Manual' : 'Auto' }}
-          </button>
         </div>
       </div>
     </div>
@@ -311,32 +298,73 @@
 
     <!-- Scan / Cancel panel -->
     <div
-      class="card transition-all duration-200"
-      :class="scannerStore.cancelMode
-        ? 'border-red-200 bg-red-50/40'
-        : 'border-dashed border-zinc-300 bg-zinc-50/50'"
+      class="card transition-all duration-300"
+      :class="scannerStore.cancelMode ? 'border-red-200' : 'border-zinc-200'"
     >
-      <!-- Header row with mode toggle -->
-      <div class="flex items-center justify-between mb-2.5">
-        <p class="text-[10px] font-semibold uppercase tracking-widest"
-           :class="scannerStore.cancelMode ? 'text-red-400' : 'text-zinc-400'">
-          {{ scannerStore.cancelMode ? 'โหมดยกเลิก' : 'สแกนด้วยมือ' }}
-        </p>
-        <button
-          @click="scannerStore.toggleCancelMode()"
-          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all"
-          :class="scannerStore.cancelMode
-            ? 'bg-red-100 border-red-200 text-red-600 hover:bg-red-200'
-            : 'bg-white border-zinc-200 text-zinc-500 hover:border-zinc-300'"
-        >
-          <span
-            class="w-1.5 h-1.5 rounded-full transition-colors"
-            :class="scannerStore.cancelMode ? 'bg-red-500 animate-pulse' : 'bg-zinc-300'"
-          ></span>
-          {{ scannerStore.cancelMode ? 'เปิดอยู่' : 'โหมดยกเลิก' }}
-        </button>
+      <!-- Toggles row -->
+      <div class="flex gap-2 mb-3">
+        <!-- Scan / Cancel -->
+        <div class="flex gap-0.5 p-1 bg-zinc-100 rounded-xl flex-1">
+          <button
+            @click="scannerStore.cancelMode && scannerStore.toggleCancelMode()"
+            class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
+            :class="!scannerStore.cancelMode
+              ? 'bg-white text-[#09090b] shadow-sm'
+              : 'text-zinc-400 hover:text-zinc-500'"
+          >
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+            </svg>
+            สแกน
+          </button>
+          <button
+            @click="!scannerStore.cancelMode && scannerStore.toggleCancelMode()"
+            class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
+            :class="scannerStore.cancelMode
+              ? 'bg-red-500 text-white shadow-sm'
+              : 'text-zinc-400 hover:text-zinc-500'"
+          >
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+            </svg>
+            ยกเลิก
+          </button>
+        </div>
+
+        <!-- Auto / Manual -->
+        <div class="flex gap-0.5 p-1 bg-zinc-100 rounded-xl flex-1">
+          <button
+            @click="authStore.scanInputMode !== 'auto' && authStore.toggleScanInputMode()"
+            class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
+            :class="authStore.scanInputMode === 'auto'
+              ? 'bg-white text-[#09090b] shadow-sm'
+              : 'text-zinc-400 hover:text-zinc-500'"
+          >
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            Auto
+          </button>
+          <button
+            @click="authStore.scanInputMode !== 'manual' && authStore.toggleScanInputMode()"
+            class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
+            :class="authStore.scanInputMode === 'manual'
+              ? 'bg-blue-500 text-white shadow-sm'
+              : 'text-zinc-400 hover:text-zinc-500'"
+          >
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/>
+            </svg>
+            Manual
+          </button>
+        </div>
       </div>
 
+      <!-- Input + Action -->
       <div class="flex gap-2">
         <input
           v-model="testBarcode"
@@ -349,7 +377,7 @@
         <button
           @click="runTestScan"
           :disabled="!testBarcode || isTestLoading"
-          class="shrink-0 px-3 py-2 rounded-xl text-white text-xs font-semibold disabled:opacity-40 transition-all"
+          class="shrink-0 px-4 py-2 rounded-xl text-white text-xs font-semibold disabled:opacity-40 transition-all"
           :class="scannerStore.cancelMode
             ? 'bg-red-500 hover:bg-red-600'
             : 'bg-[#9333ea] hover:bg-[#7e22ce]'"
