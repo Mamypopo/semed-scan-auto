@@ -46,6 +46,7 @@ enum ScanType {
   SCAN
   EXCEL
   BULK
+  EXAMINATION
 }
 
 enum ExaminationItemType {
@@ -118,9 +119,12 @@ model User {
   id               Int     @id @default(autoincrement())
   name             String
   signatureName    String? // ชื่อที่ใช้แสดงบนรายงาน/ลายเซ็น (snapshot-friendly)
+  signatureNameEn  String? // ชื่อลงนามภาษาอังกฤษ
   nickname         String? // ชื่อเล่น
   email            String  @unique
-  password         String
+  password         String?
+  microsoftId      String? @unique
+  microsoftEmail   String? @unique
   roleId           Int? // RBAC: FK to Role
   defaultCNGroupId String?
   isGlobalPartTime Boolean @default(false)
@@ -128,12 +132,15 @@ model User {
   // Multi-Branch & System Access Control
   canAccessCheckup Boolean @default(true) // เข้าถึงระบบ Checkup ได้หรือไม่
   canAccessClinic  Boolean @default(true) // เข้าถึงระบบ Clinic ได้หรือไม่
+  allowedCompanies Json?   @default("[]") // CUSTOMER: บริษัทที่ดูได้ ([] = ทุกบริษัท)
 
+  profileImage     String?
   medicalLicenseNo String? // เลขใบอนุญาตประกอบวิชาชีพเวชกรรม (ว.XXXXX)
   doctorPosition   String? // ตำแหน่งหน้าที่ เช่น แพทย์ประจำ, นายแพทย์
 
-  isActive  Boolean   @default(true)
-  expiredAt DateTime? // วันหมดอายุ (สำหรับ PARTTIME และ CUSTOMER)
+  isActive     Boolean   @default(true)
+  expiredAt    DateTime? // วันหมดอายุ (สำหรับ PARTTIME และ CUSTOMER)
+  lastLoginAt  DateTime? // เวลาใช้งานล่าสุด
   createdBy Int?
   updatedBy Int?
   createdAt DateTime  @default(now())
@@ -189,6 +196,10 @@ model User {
   muscleExaminationsCreated          MuscleExamination[]         @relation("MuscleExaminationCreatedBy")
   muscleExaminationsUpdated          MuscleExamination[]         @relation("MuscleExaminationUpdatedBy")
   muscleExaminationSpecifiesCreated  MuscleExaminationSpecify[]  @relation("MuscleExaminationSpecifyCreatedBy")
+  lungExaminationsCreated            LungExamination[]           @relation("LungExaminationCreatedBy")
+  lungExaminationsUpdated            LungExamination[]           @relation("LungExaminationUpdatedBy")
+  bmdExaminationsCreated             BmdExamination[]            @relation("BmdExaminationCreatedBy")
+  bmdExaminationsUpdated             BmdExamination[]            @relation("BmdExaminationUpdatedBy")
   equipmentCreated                   Equipment[]                 @relation("EquipmentCreatedBy")
   equipmentUpdated                   Equipment[]                 @relation("EquipmentUpdatedBy")
   equipmentToStationsCreated         EquipmentToStation[]        @relation("EquipmentToStationCreatedBy")
@@ -231,6 +242,7 @@ model User {
   labExaminationsApproved            LabExamination[]            @relation("LabExaminationApprovedBy")
   labExaminationsReceived            LabExamination[]            @relation("LabExaminationReceivedBy")
   labExaminationAuditLogs            LabExaminationAuditLog[]    @relation("LabExaminationAuditUser")
+  labReportVersions                  LabReportVersion[]          @relation("LabReportVersionCreatedBy")
   resultItemsRecorded                ResultItem[]                @relation("ResultItemRecordedBy")
   resultItemsSubmitted               ResultItem[]                @relation("ResultItemSubmittedBy")
   resultItemsApproved                ResultItem[]                @relation("ResultItemApprovedBy")
@@ -238,6 +250,7 @@ model User {
   peQcResultsBy                      PeQcResult[]                @relation("PeQcResultQcBy")
   patientPackageSelectionsCreated    PatientPackageSelection[]   @relation("PatientPackageSelectionCreatedBy")
   medCertsIssued                     MedicalCertificate[]        @relation("MedCertIssuedBy")
+  defaultDoctorForBranches           Branch[]                    @relation("BranchDefaultDoctor")
 
   @@index([roleId])
   @@index([createdBy])
@@ -250,16 +263,22 @@ model Branch {
   id            Int      @id @default(autoincrement())
   code          String   @unique
   name          String
+  nameEn        String?
   email         String?
   licenseNumber String?
   address       String?
+  addressEn     String?
   phone         String?
-  isActive      Boolean  @default(true)
-  isMainBranch  Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @default(now())
+  website       String?
+  logo          String?
+  isActive        Boolean  @default(true)
+  isMainBranch    Boolean  @default(false)
+  defaultDoctorId Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now())
 
   // Relations
+  defaultDoctor User? @relation("BranchDefaultDoctor", fields: [defaultDoctorId], references: [id], onDelete: SetNull)
   systemLogs                    SystemLog[]
   registrations                 Registration[]
   patientExaminationItems       PatientExaminationItem[]
@@ -538,14 +557,15 @@ model CNGroup {
   updatedAt DateTime @default(now())
 
   // Relations
-  company       Company?              @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  createdByUser User?                 @relation("CNGroupCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedByUser User?                 @relation("CNGroupUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
-  memberships   CNGroupMembership[]
-  documentJobs  DocumentJob[]         @relation("DocumentJobToCNGroup")
-  expectedItems CNGroupExpectedItem[]
-  tasks         CnGroupTask[] // Tasks สำหรับ Workflow Tracking
-  taskTemplate  TaskTemplate?         @relation("CNGroupTaskTemplate", fields: [taskTemplateId], references: [id], onDelete: SetNull)
+  company         Company?              @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  createdByUser   User?                 @relation("CNGroupCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedByUser   User?                 @relation("CNGroupUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+  memberships     CNGroupMembership[]
+  documentJobs    DocumentJob[]         @relation("DocumentJobToCNGroup")
+  expectedItems   CNGroupExpectedItem[]
+  tasks           CnGroupTask[] // Tasks สำหรับ Workflow Tracking
+  taskTemplate    TaskTemplate?         @relation("CNGroupTaskTemplate", fields: [taskTemplateId], references: [id], onDelete: SetNull)
+  receiptSequence ReceiptSequence?
 
   @@index([isActive])
   @@index([code])
@@ -592,8 +612,11 @@ model CNGroupMembership {
   earExaminations          EarExamination[]          @relation("EarExaminationCNGroup")
   eyeExaminations          EyeExamination[]          @relation("EyeExaminationCNGroup")
   muscleExaminations       MuscleExamination[]       @relation("MuscleExaminationCNGroup")
+  lungExaminations         LungExamination[]         @relation("LungExaminationCNGroup")
+  bmdExaminations          BmdExamination[]          @relation("BmdExaminationCNGroup")
   documentJobMemberships   DocumentJobMembership[]
   patientPackageSelections PatientPackageSelection[]
+  payments                 Payment[]
 
   @@unique([cnGroupId, cn])
   @@unique([patientId, cnGroupId])
@@ -641,7 +664,10 @@ model PatientMembership {
   earExaminations          EarExamination[]          @relation("EarExaminationPatientMembership")
   eyeExaminations          EyeExamination[]          @relation("EyeExaminationPatientMembership")
   muscleExaminations       MuscleExamination[]       @relation("MuscleExaminationPatientMembership")
+  lungExaminations         LungExamination[]         @relation("LungExaminationPatientMembership")
+  bmdExaminations          BmdExamination[]          @relation("BmdExaminationPatientMembership")
   patientPackageSelections PatientPackageSelection[]
+  payments                 Payment[]
 
   @@index([patientId])
   @@index([companyName])
@@ -732,6 +758,8 @@ model MedicalItem {
   isActive         Boolean           @default(true)
   note             String?
   method           String? // วิธีการตรวจระดับรายการตรวจ (แสดงใน PDF header row)
+  reportGroupId    Int?              // กลุ่มสำหรับแสดงใน report (null = standalone)
+  reportGroupOrder Int               @default(0) // ลำดับภายในกลุ่ม
   requireReferral  Boolean           @default(false) // ต้องส่งตัวหรือไม่
   referralBranchId Int? // สาขาที่ต้องส่งตัวไป (null = คลินิกหลัก)
   source           MedicalItemSource @default(MANUAL) // แหล่งที่มาของรายการตรวจ (MANUAL = สร้างเอง, CRM_API = จาก CRM API)
@@ -748,6 +776,7 @@ model MedicalItem {
   category                ItemCategory?                 @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   referralBranch          Branch?                       @relation("MedicalItemReferralBranch", fields: [referralBranchId], references: [id], onDelete: SetNull)
   specimenType            SpecimenType?                 @relation(fields: [specimenTypeId], references: [id], onDelete: SetNull)
+  reportGroup             ReportGroup?                  @relation(fields: [reportGroupId], references: [id], onDelete: SetNull)
   stationToMedicalItems   StationToMedicalItem[]
   packageItems            PackageItem[]
   patientExaminationItems PatientExaminationItem[]
@@ -762,11 +791,29 @@ model MedicalItem {
   @@index([specimenTypeId])
   @@index([isActive])
   @@index([priority])
+  @@index([reportGroupId])
   @@index([requireReferral])
   @@index([referralBranchId])
   @@index([source])
   @@index([createdBy])
   @@index([updatedBy])
+}
+
+// ==========================================
+// ReportGroup - กลุ่มรายการตรวจสำหรับแสดงใน report (เช่น Lipid Profile, LFT, RFT)
+// ==========================================
+model ReportGroup {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  medicalItems MedicalItem[]
+
+  @@index([sortOrder])
+  @@index([isActive])
 }
 
 // ==========================================
@@ -862,22 +909,26 @@ model PackageBranch {
 }
 
 model ParameterTemplate {
-  id            Int      @id @default(autoincrement())
-  name          String
-  unit          String?
-  description   String?
-  valueType     String?
-  decimalPlaces Int      @default(0)
-  options       Json?
-  examTypeId    Int?
-  examSubTypeId Int?
-  isActive      Boolean  @default(true)
-  isIso15189    Boolean  @default(false) // พารามิเตอร์นี้ผ่านมาตรฐาน ISO 15189 (แสดง * เฉพาะเมื่อ MedicalItem ไม่ได้ mark)
-  deltaLimit    Float?   @default(10.0) // % การเปลี่ยนแปลงที่จะแสดง Delta Check Badge (default 10%)
-  createdBy     Int?
-  updatedBy     Int?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  name           String
+  unit           String?
+  description    String?
+  valueType      String?
+  decimalPlaces  Int      @default(0)
+  options        Json?
+  examTypeId     Int?
+  examSubTypeId  Int?
+  isActive       Boolean  @default(true)
+  isIso15189     Boolean  @default(false) // พารามิเตอร์นี้ผ่านมาตรฐาน ISO 15189 (แสดง * เฉพาะเมื่อ MedicalItem ไม่ได้ mark)
+  deltaLimit     Float?   @default(10.0) // % การเปลี่ยนแปลงที่จะแสดง Delta Check Badge (default 10%)
+  note           String? // หมายเหตุเริ่มต้น — ใช้ pre-fill ResultItem.note ในหน้าลงผล lab
+  detailTriggers Json? // ["Found","Positive"] — ค่า enum ที่เมื่อเลือกแล้วให้แสดงช่องรายงานเพิ่มเติม
+  warnValues     Json? // ["Negative","AB"] — ค่าที่หายากหรือผิดปกติ ให้ highlight เตือนใน UI (ยังบันทึกได้)
+  sumGroup       String? // ชื่อกลุ่มที่ต้องรวมกันได้ 100 เช่น "DC" สำหรับ Differential Count
+  createdBy      Int?
+  updatedBy      Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now())
 
   // Relations
   createdByUser                       User?                                @relation("ParameterTemplateCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
@@ -925,8 +976,8 @@ model ParameterReferenceRange {
   expectedValue String? // ค่าที่คาดหวังเดียว (ถ้าใช้)
   normalValues  Json? // รายการค่าปกติ เช่น ["negative", "ไม่พบ"]
 
-  // Interpretation messages 
-  interpretation Json? // { normal: "ปกติ", low: "ผิดปกติ (ต่ำเกินไป)", high: "ผิดปกติ (สูงเกินไป)", criticalLow: "ผิดปกติขั้นวิกฤต (ต่ำเกินไป)", criticalHigh: "ผิดปกติขั้นวิกฤต (สูงเกินไป)", borderlineLow: "มีความเสี่ยง (ต่ำกว่าปกติ)", borderlineHigh: "มีความเสี่ยง (สูงกว่าปกติ)", abnormal: "ผิดปกติ" }
+  // Interpretation messages — flexible range-based lookup
+  rangeInterpretations Json? // [{ "min": number|null, "max": number|null, "text": string }]
 
   note String?
 
@@ -1100,6 +1151,8 @@ model Patient {
   earExaminations          EarExamination[]
   eyeExaminations          EyeExamination[]
   muscleExaminations       MuscleExamination[]
+  lungExaminations         LungExamination[]
+  bmdExaminations          BmdExamination[]
   referrals                Referral[]
   patientLogs              PatientLog[]
   labExaminations          LabExamination[]
@@ -1128,11 +1181,12 @@ model Registration {
   registeredAt        DateTime?
   vnNumber            String?
   insurance_type_id   Int?
-  branchId            Int? // Optional: สำหรับ checkup registration ไม่เกี่ยวกับสาขา
+  branchId            Int? // สำหรับ checkup registration ไม่เกี่ยวกับสาขา
   createdBy           Int?
   updatedBy           Int?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @default(now())
+  note                String?
   isCancelled         Boolean          @default(false)
   cancelledAt         DateTime?
   cancelledBy         Int?
@@ -1170,14 +1224,16 @@ model Registration {
 
 // Payment model - สำหรับเก็บข้อมูลการชำระเงิน (ยืดหยุ่นสำหรับระบบการเงินในอนาคต)
 model Payment {
-  id             String        @id @default(cuid())
-  registrationId String // Foreign key to Registration
-  status         String // 'PAID', 'PENDING', 'CANCELLED'
-  amount         Decimal?      @db.Decimal(10, 2) // จำนวนเงินที่ชำระ
-  totalAmount    Decimal?      @db.Decimal(10, 2) // จำนวนเงินรวมทั้งหมด (ก่อนส่วนลด)
-  totalDiscount  Decimal?      @db.Decimal(10, 2) // ส่วนลดรวมทั้งหมด
-  discountType   DiscountType? // 'AMOUNT' หรือ 'PERCENTAGE' สำหรับส่วนลดรวม
-  finalAmount    Decimal?      @db.Decimal(10, 2) // จำนวนเงินสุดท้าย (หลังหักส่วนลด)
+  id                  String        @id @default(cuid())
+  registrationId      String? // Foreign key to Registration (optional — Checkup ไม่มี registration)
+  patientCNGroupId    String? // FK → CNGroupMembership (Checkup special items)
+  patientMembershipId String? // FK → PatientMembership (เผื่ออนาคต)
+  status              String // 'PAID', 'PENDING', 'CANCELLED', 'VOIDED'
+  amount              Decimal?      @db.Decimal(10, 2) // จำนวนเงินที่ชำระ
+  totalAmount         Decimal?      @db.Decimal(10, 2) // จำนวนเงินรวมทั้งหมด (ก่อนส่วนลด)
+  totalDiscount       Decimal?      @db.Decimal(10, 2) // ส่วนลดรวมทั้งหมด
+  discountType        DiscountType? // 'AMOUNT' หรือ 'PERCENTAGE' สำหรับส่วนลดรวม
+  finalAmount         Decimal?      @db.Decimal(10, 2) // จำนวนเงินสุดท้าย (หลังหักส่วนลด)
 
   // Payment Details
   paymentMethod  String? // 'TRANSFER' | 'CREDIT' | 'HDMALL'
@@ -1196,15 +1252,45 @@ model Payment {
   updatedAt DateTime @default(now())
 
   // Relations
-  registration  Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
-  createdByUser User?        @relation("PaymentCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedByUser User?        @relation("PaymentUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+  registration      Registration?      @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  patientCNGroup    CNGroupMembership? @relation(fields: [patientCNGroupId], references: [id], onDelete: SetNull)
+  patientMembership PatientMembership? @relation(fields: [patientMembershipId], references: [id], onDelete: SetNull)
+  createdByUser     User?              @relation("PaymentCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedByUser     User?              @relation("PaymentUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+  paymentItems      PaymentItem[]
 
   @@index([registrationId])
+  @@index([patientCNGroupId])
+  @@index([patientMembershipId])
   @@index([status])
   @@index([paidAt])
   @@index([createdAt])
   @@index([registrationId, status])
+  @@index([patientCNGroupId, status])
+}
+
+model PaymentItem {
+  id                       String   @id @default(cuid())
+  paymentId                String
+  patientExaminationItemId String
+  medicalItemName          String // snapshot ชื่อรายการตรวจ ณ เวลาซื้อ
+  price                    Decimal  @db.Decimal(10, 2)
+  quantity                 Int      @default(1)
+  createdAt                DateTime @default(now())
+
+  payment                Payment                @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  patientExaminationItem PatientExaminationItem @relation(fields: [patientExaminationItemId], references: [id])
+
+  @@index([paymentId])
+  @@index([patientExaminationItemId])
+}
+
+model ReceiptSequence {
+  id        String @id @default(cuid())
+  cnGroupId String @unique
+  current   Int    @default(0)
+
+  cnGroup CNGroup @relation(fields: [cnGroupId], references: [id])
 }
 
 model PatientExaminationItem {
@@ -1246,6 +1332,7 @@ model PatientExaminationItem {
   patientExaminationParameterMappings PatientExaminationParameterMapping[]
   examinationResult                   ExaminationResult?
   referrals                           Referral[]
+  paymentItems                        PaymentItem[]
 
   @@index([patientId])
   @@index([medicalItemId])
@@ -1485,6 +1572,8 @@ model HealthRecord {
   othersSpecified      String? // อื่นๆ ระบุ
 
   // ความเห็นของแพทย์ / Doctor Recommend
+  otherResultsNote        String?  @db.Text // ผลตรวจอื่นๆ (free-text ใส่ตอนพิมพ์รายงาน)
+
   doctorRecommendIsNormal Boolean? // true = ปกติ, false = ผิดปกติ, null = ยังไม่เลือก
   doctorRecommendNote     String? // ระบุรายละเอียด (ถ้าผิดปกติ)
   docBy                   Int? // แพทย์ผู้ลงผล/ลงนาม (User id)
@@ -1567,7 +1656,7 @@ model OldHealthRecord {
   id               String  @id @default(cuid())
   patientId        Int
   patientCNGroupId String? // link กับ CNGroupMembership ที่ import มา
-  DateReg          Int     // ปี พ.ศ. เช่น 2566
+  DateReg          Int // ปี พ.ศ. เช่น 2566
 
   // Vitals
   height      String?
@@ -1660,6 +1749,8 @@ model Equipment {
   earExaminations     EarExamination[]
   eyeExaminations     EyeExamination[]
   muscleExaminations  MuscleExamination[]
+  lungExaminations    LungExamination[]
+  bmdExaminations     BmdExamination[]
   equipmentToStations EquipmentToStation[]
 
   @@index([isActive])
@@ -1770,6 +1861,8 @@ model EarExamination {
   Drug_Ear                        String? // ประวัติการได้รับยา (มี/ไม่มี)
   Drug_Ear_Specify                String? // รายละเอียดยาที่ส่งผลต่อหู
 
+  earInterpretationResult String? // คำแปลผลรวมทั้งสองหู + คำแนะนำ เช่น "หูซ้ายปกติ หูขวาผิดปกติที่ความถี่สูง ควรสวมอุปกรณ์ป้องกันเสียง"
+
   recordBy  String? // ชื่อเต็มของคนบันทึก (คำนำหน้า + ชื่อ + นามสกุล)
   isDeleted Boolean @default(false) // สำหรับ soft delete
 
@@ -1845,6 +1938,7 @@ model ResultItem {
   labFlag        String? // เฉพาะ Lab: 'LL' | 'L' | 'H' | 'HH' (ไม่เกี่ยวกับ flag/interpretation)
   interpretation String? // คำแปลผลจาก ParameterReferenceRange.interpretation[flag] (ปกติ/ผิดปกติ ฯลฯ)
   note           String? // หมายเหตุที่ผู้ลงผลกรอกต่อรายการนี้
+  resultDetail   String? // รายงานเพิ่มเติม เช่น ชื่อเชื้อ เมื่อ value อยู่ใน detailTriggers
   parameterOrder Int? // ลำดับแสดงผล
 
   recordedBy     Int? // ใครลงผลที่พารามิเตอร์นี้ (User id)
@@ -1999,22 +2093,23 @@ model LabNumberSequence {
 }
 
 model LabExamination {
-  id             String               @id @default(cuid())
-  patientId      Int
-  registrationId String?
-  labNumber      String               @unique
-  specimenTypeId Int?
-  collectedAt    DateTime?
-  receivedAt     DateTime?
-  receivedBy     Int?
-  ward           String?
-  status         LabExaminationStatus @default(WAITING)
-  labBy          Int?
-  labAt          DateTime?
-  approvedBy     Int?
-  approvedAt     DateTime?
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  id                   String               @id @default(cuid())
+  patientId            Int
+  registrationId       String?
+  labNumber            String               @unique
+  specimenTypeId       Int?
+  collectedAt          DateTime?
+  receivedAt           DateTime?
+  receivedBy           Int?
+  ward                 String?
+  status               LabExaminationStatus @default(WAITING)
+  labBy                Int?
+  labAt                DateTime?
+  approvedBy           Int?
+  approvedAt           DateTime?
+  currentReportVersion Int                  @default(0) // เพิ่มทุกครั้งที่ approve หรือ quick-edit
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
 
   // Relations
   patient        Patient                  @relation(fields: [patientId], references: [id], onDelete: Cascade)
@@ -2025,6 +2120,7 @@ model LabExamination {
   approvedByUser User?                    @relation("LabExaminationApprovedBy", fields: [approvedBy], references: [id], onDelete: SetNull)
   patientItems   PatientExaminationItem[]
   auditLogs      LabExaminationAuditLog[]
+  reportVersions LabReportVersion[]
 
   @@index([patientId])
   @@index([registrationId])
@@ -2057,6 +2153,24 @@ model LabExaminationAuditLog {
   @@index([patientHn])
   @@index([patientName])
   @@index([createdAt])
+}
+
+model LabReportVersion {
+  id               String   @id @default(cuid())
+  labExaminationId String
+  version          Int // 1, 2, 3...
+  displayLabNumber String // "0000020-1", "0000020-2"
+  snapshotData     Json // ข้อมูล report ทั้งหมด ณ เวลา approve/quick-edit
+  createdBy        Int?
+  createdAt        DateTime @default(now())
+
+  // Relations
+  labExamination LabExamination @relation(fields: [labExaminationId], references: [id], onDelete: Cascade)
+  createdByUser  User?          @relation("LabReportVersionCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@unique([labExaminationId, version])
+  @@index([labExaminationId])
+  @@index([createdBy])
 }
 
 model PresentIllness {
@@ -2168,6 +2282,12 @@ model EyeExamination {
   BoxCount_score  String? // จำนวนกล่องสี่เหลี่ยม (3, 2)
   BoxCount_Result String? // ผลการตรวจจำนวนกล่อง (ปกติ, เห็นแดงตาซ้ายผิดปกติ, เห็นน้ำเงินตาขวาผิดปกติ)
 
+  VAFar_Score  String? // ค่าสายตาระยะไกล เช่น "20/30" (คำนวณจาก Far_Score)
+  VANear_Score String? // ค่าสายตาระยะใกล้ เช่น "20/30" (คำนวณจาก Near_Score)
+  VA_Result    String? // ผลรวมค่าสายตา
+
+  OccVision_Vision String? // คำแปลผลรวมทั้งหมด เช่น "ปกติ" หรือ "การมองเห็นระยะไกล ตาบอดสี มีความผิดปกติ ควรสวมแว่นสายตา..."
+
   recordBy  String? // ชื่อเต็มของคนบันทึก (คำนำหน้า + ชื่อ + นามสกุล)
   isDeleted Boolean @default(false) // สำหรับ soft delete
 
@@ -2278,6 +2398,127 @@ model MuscleExaminationSpecify {
 
   @@index([createdById])
   @@index([isActive])
+}
+
+// ระบบการตรวจปอด (Spirometry)
+model LungExamination {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy Int?
+  updatedBy Int?
+
+  // ข้อมูลการตรวจ
+  examinationNumber Int // ครั้งที่ตรวจ (auto-increment ต่อผู้ป่วย)
+
+  // Foreign Key ไปยัง Patient และ Membership
+  patientId Int
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  // สำหรับ Checkup
+  patientCNGroupId String?
+  patientCNGroup   CNGroupMembership? @relation("LungExaminationCNGroup", fields: [patientCNGroupId], references: [id], onDelete: SetNull)
+
+  // สำหรับ Clinic
+  patientMembershipId String?
+  patientMembership   PatientMembership? @relation("LungExaminationPatientMembership", fields: [patientMembershipId], references: [id], onDelete: SetNull)
+
+  // เก็บ CN และ HN แยกกัน
+  cn String? // หมายเลข CN (สำหรับ Checkup)
+  hn String? // หมายเลข HN (สำหรับ Clinic)
+
+  // เครื่องมือที่ใช้
+  equipmentId String?
+  equipment   Equipment? @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+
+  // ข้อมูลพื้นฐาน
+  age    Float? // อายุ (ปี)
+  height Float? // ส่วนสูง (ซม.)
+  gender String? // เพศ (1=ชาย, 2=หญิง)
+
+  // ค่า FEV1
+  fev1Actual           String? // ค่า FEV1 ที่วัดได้ (ลิตร)
+  fev1Predicted        String? // ค่า FEV1 Predicted
+  fev1PercentPredicted Float? // %Predicted FEV1
+
+  // ค่า FVC
+  fvcActual           String? // ค่า FVC ที่วัดได้ (ลิตร)
+  fvcPredicted        String? // ค่า FVC Predicted
+  fvcPercentPredicted Float? // %Predicted FVC
+
+  // อัตราส่วน
+  fev1FvcRatio Float? // FEV1/FVC ratio (%)
+
+  // ผลการวินิจฉัย
+  assessmentResult String? // Normal / Restrictive Mild/Moderate/Severe / Obstructive Mild/Moderate/Severe / Mixed
+  lungTestNote     String? // หมายเหตุ
+
+  recordBy  String?
+  isDeleted Boolean @default(false)
+
+  // Relations
+  createdByUser User? @relation("LungExaminationCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedByUser User? @relation("LungExaminationUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@unique([cn, patientCNGroupId, examinationNumber])
+  @@unique([hn, patientMembershipId, examinationNumber])
+  @@index([patientId])
+  @@index([patientCNGroupId])
+  @@index([patientMembershipId])
+  @@index([cn])
+  @@index([hn])
+  @@index([equipmentId])
+  @@index([createdBy])
+  @@index([createdAt])
+  @@index([isDeleted])
+}
+
+model BmdExamination {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy Int?
+  updatedBy Int?
+
+  examinationNumber Int
+
+  patientId Int
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  patientCNGroupId String?
+  patientCNGroup   CNGroupMembership? @relation("BmdExaminationCNGroup", fields: [patientCNGroupId], references: [id], onDelete: SetNull)
+
+  patientMembershipId String?
+  patientMembership   PatientMembership? @relation("BmdExaminationPatientMembership", fields: [patientMembershipId], references: [id], onDelete: SetNull)
+
+  cn String?
+  hn String?
+
+  equipmentId String?
+  equipment   Equipment? @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+
+  tScore           Float? // T-Score (ค่าติดลบได้) ใส่จากเครื่องโดยตรง
+  assessmentResult String? // ภาวะกระดูกอยู่ในเกณฑ์ปกติ / ภาวะกระดูกบาง / ภาวะกระดูกพรุน
+  bmdResult        String? // ปกติ / ผิดปกติ
+  bmdTestNote      String?
+
+  recordBy  String?
+  isDeleted Boolean @default(false)
+
+  createdByUser User? @relation("BmdExaminationCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedByUser User? @relation("BmdExaminationUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@unique([cn, patientCNGroupId, examinationNumber])
+  @@unique([hn, patientMembershipId, examinationNumber])
+  @@index([patientId])
+  @@index([patientCNGroupId])
+  @@index([patientMembershipId])
+  @@index([cn])
+  @@index([hn])
+  @@index([equipmentId])
+  @@index([createdBy])
+  @@index([createdAt])
+  @@index([isDeleted])
 }
 
 // ==========================================
@@ -2597,11 +2838,13 @@ model CnGroupTask {
   dependsOnOrder Int? // ลำดับของงานที่ควรเสร็จก่อน (Soft Dependency)
 
   // Timeline
-  dueDate     DateTime? // กำหนดเสร็จงานย่อย (คำนวณจาก targetEndDate)
-  startedAt   DateTime? // บันทึกเมื่อ status เป็น IN_PROGRESS
-  completedAt DateTime? // บันทึกเมื่อ status เป็น COMPLETE
+  plannedStartDate DateTime? // วันเริ่มต้นที่วางแผนไว้ (คำนวณจาก template)
+  dueDate          DateTime? // กำหนดเสร็จงานย่อย (คำนวณจาก targetEndDate)
+  startedAt        DateTime? // บันทึกเมื่อ status เป็น IN_PROGRESS
+  completedAt      DateTime? // บันทึกเมื่อ status เป็น COMPLETE
 
   // Additional info
+  phase        String? // หมวดหมู่/ขั้นตอนหลัก เช่น "ก่อนตรวจ", "วันตรวจ", "หลังตรวจ"
   remark       String? // บันทึกเพิ่มเติมกรณีงานติดขัด
   leadTimeDays Int? // เวลาที่ควรใช้ (วัน) - ก๊อปจาก template
 
@@ -2683,6 +2926,7 @@ model MedicalCertificate {
   hospitalizationNote   String?
   epilepsyHas           Boolean @default(false)
   epilepsyNote          String?
+  otherHistoryHas       Boolean @default(false)
   otherHistory          String? @db.Text
 
   // Vitals snapshot จาก HealthRecord ล่าสุด
@@ -2720,10 +2964,15 @@ model MedicalCertificate {
   registration   Registration? @relation(fields: [registrationId], references: [id])
 
   // SICK_LEAVE fields
-  mcDiagnosis String?   @db.Text
-  mcRestFrom  DateTime?
-  mcRestTo    DateTime?
-  mcCanFly    Boolean?
+  mcDiagnosis      String?   @db.Text
+  mcRecommendation String?   @db.Text
+  mcTreatFrom      DateTime?
+  mcTreatTo        DateTime?
+  mcVisitNote      String?   @db.Text
+  mcVisitDate      DateTime?
+  mcRestFrom       DateTime?
+  mcRestTo         DateTime?
+  mcCanFly         Boolean?
 
   // CONFINED_SPACE fields
   medicationHas     Boolean? // ประวัติการใช้ยาประจำ

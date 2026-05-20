@@ -5,7 +5,7 @@ const notifier = require('node-notifier')
 const { saveConfig, clearConfig, getStationIds, getScanInputMode } = require('./store')
 const { playSound } = require('./sound')
 const { getMergedConfig, shouldOpenDevtools, isSoundEnabled, getApiBaseUrl } = require('./config')
-const { login, getStations, sendScanData, cancelScan, verifyToken } = require('./api')
+const { login, getStations, sendScanData, cancelScan, verifyToken, lookupPatient, getRemarkReasons, createStationRemark } = require('./api')
 const { initScanner } = require('./scanner')
 
 let mainWindow
@@ -421,6 +421,42 @@ ipcMain.handle('stations:get', async () => {
     const status = error.response?.status
     sendLog('error', `โหลดจุดตรวจล้มเหลว${status ? ` (${status})` : ''}`, error.response?.data?.message || error.message)
     return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('patient:lookup', async (event, { cn, stationId }) => {
+  try {
+    const result = await lookupPatient(cn, stationId)
+    return JSON.parse(JSON.stringify(result))
+  } catch (error) {
+    const status = error.response?.status
+    return {
+      success: false,
+      message: status === 404
+        ? 'ไม่พบผู้ป่วยจาก CN นี้ในจุดตรวจที่เลือก'
+        : error.response?.data?.message || error.message
+    }
+  }
+})
+
+ipcMain.handle('remark-reasons:get', async () => {
+  try {
+    const result = await getRemarkReasons()
+    return JSON.parse(JSON.stringify(result))
+  } catch (error) {
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('station-remark:create', async (event, data) => {
+  try {
+    const result = await createStationRemark(data)
+    return JSON.parse(JSON.stringify(result))
+  } catch (error) {
+    return {
+      success: false,
+      message: error.response?.data?.message || error.message
+    }
   }
 })
 

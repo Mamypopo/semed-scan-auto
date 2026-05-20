@@ -364,11 +364,84 @@
       </div>
     </div>
 
+    <!-- Remark Card -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-3 cursor-pointer select-none" @click="showRemarkForm = !showRemarkForm">
+        <p class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest">เพิ่มหมายเหตุ</p>
+        <svg class="w-3.5 h-3.5 text-zinc-300 transition-transform duration-200" :class="showRemarkForm ? 'rotate-180' : ''"
+          fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </div>
+
+      <div v-if="showRemarkForm" class="space-y-2.5">
+        <!-- CN.stationId -->
+        <div class="flex gap-2">
+          <input v-model="remarkForm.cn" type="text" class="input flex-1 text-xs py-2" placeholder="CN.จุดตรวจ เช่น 691220014.16"
+            @keydown.enter="lookupPatient"/>
+        </div>
+
+        <button @click="lookupPatient" :disabled="!remarkForm.cn || !remarkForm.stationId || isLookingUp"
+          class="w-full py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-40 transition-all"
+          style="background:#696CFF; box-shadow:0 2px 8px -3px rgba(105,108,255,0.5);">
+          {{ isLookingUp ? 'กำลังค้นหา...' : 'ค้นหา' }}
+        </button>
+
+        <!-- Patient found -->
+        <div v-if="foundPatient">
+          <!-- ข้อมูลผู้ป่วย -->
+          <div class="px-3 py-2.5 rounded-xl mb-2" style="background:#f0fdf4; border:1px solid #bbf7d0;">
+            <p class="text-xs font-semibold text-[#09090b]">{{ foundPatient.name }}</p>
+            <div class="flex gap-3 mt-0.5 flex-wrap">
+              <span v-if="foundPatient.hn" class="text-[10px] text-zinc-500">HN: {{ foundPatient.hn }}</span>
+              <span class="text-[10px] text-zinc-500">CN: {{ foundPatient.cn }}</span>
+              <span v-if="foundPatient.station?.name" class="text-[10px] text-zinc-400">{{ foundPatient.station.name }}</span>
+            </div>
+            <!-- รายการตรวจที่จุดนี้ -->
+            <div v-if="foundPatient.examItems?.length" class="mt-1.5 flex flex-wrap gap-1">
+              <span v-for="item in foundPatient.examItems" :key="item.id"
+                class="px-1.5 py-0.5 rounded text-[10px]"
+                style="background:#eef2ff; color:#4338ca; border:1px solid #c7d2fe;">
+                {{ item.name }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Warning: ไม่มีรายการตรวจที่จุดนี้ -->
+          <div v-if="!foundPatient.hasExamAtStation"
+            class="flex items-center gap-2 px-3 py-2 rounded-xl mb-2"
+            style="background:#fffbeb; border:1px solid #fde68a;">
+            <svg class="w-3.5 h-3.5 shrink-0" style="color:#FFAB00;" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            <p class="text-xs" style="color:#92400e;">ผู้ป่วยไม่มีรายการตรวจที่จุดนี้ ยังสามารถบันทึกหมายเหตุได้</p>
+          </div>
+        </div>
+
+        <!-- Reason + Remark (แสดงเฉพาะเมื่อมีรายการตรวจที่จุดนี้) -->
+        <template v-if="foundPatient && foundPatient.hasExamAtStation">
+          <select v-model="remarkForm.reasonId" class="input text-xs py-2 w-full">
+            <option value="">-- เลือกเหตุผล (ไม่บังคับ) --</option>
+            <option v-for="r in remarkReasons" :key="r.id" :value="r.id">{{ r.title }}</option>
+          </select>
+
+          <textarea v-model="remarkForm.remark" class="input text-xs py-2 w-full resize-none" rows="2"
+            placeholder="หมายเหตุเพิ่มเติม (ไม่บังคับ)"></textarea>
+
+          <button @click="submitRemark" :disabled="isSavingRemark"
+            class="w-full py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-40 transition-all"
+            style="background:#71DD37; box-shadow:0 2px 8px -3px rgba(113,221,55,0.5);">
+            {{ isSavingRemark ? 'กำลังบันทึก...' : 'บันทึกหมายเหตุ' }}
+          </button>
+        </template>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useScannerStore } from '../stores/scanner'
 import { useLogStore } from '../stores/log'
@@ -383,6 +456,15 @@ const isReady = computed(() =>
 
 const showStationSelect = ref(false)
 const showLogs = ref(false)
+const showRemarkForm = ref(false)
+
+// Remark form
+const remarkForm = reactive({ cn: '', stationId: '', reasonId: '', remark: '' })
+const foundPatient = ref(null)
+const remarkReasons = ref([])
+const isLookingUp = ref(false)
+const isSavingRemark = ref(false)
+
 const stations = ref([])
 const isLoadingStations = ref(false)
 const testBarcode = ref('')
@@ -428,6 +510,68 @@ async function loadStations() {
 function toggleStationPanel() {
   showStationSelect.value = !showStationSelect.value
   if (showStationSelect.value && stations.value.length === 0) loadStations()
+}
+
+async function lookupPatient() {
+  if (!remarkForm.cn || isLookingUp.value) return
+  const parts = remarkForm.cn.trim().split('.')
+  const stationId = parseInt(parts[parts.length - 1])
+  const cn = parts.slice(0, -1).join('.')
+  if (!cn || isNaN(stationId)) {
+    const { default: Swal } = await import('sweetalert2')
+    Swal.fire({ icon: 'warning', title: 'รูปแบบไม่ถูกต้อง', text: 'กรุณาพิมพ์ในรูปแบบ CN.จุดตรวจ เช่น 691220014.16', customClass: { popup: 'swal-app' } })
+    return
+  }
+  isLookingUp.value = true
+  foundPatient.value = null
+  try {
+    const result = await window.api.lookupPatient(cn, stationId)
+    if (result.success) {
+      foundPatient.value = result.data
+      if (!remarkReasons.value.length) {
+        const r = await window.api.getRemarkReasons()
+        if (r.success) remarkReasons.value = r.data
+      }
+      // pre-fill remark เดิม ถ้ามี
+      const ex = result.data.existingRemark
+      remarkForm.reasonId = ex?.reasonId || ''
+      remarkForm.remark = ex?.remark || ''
+    } else {
+      import('sweetalert2').then(({ default: Swal }) => {
+        Swal.fire({ icon: 'warning', title: 'ไม่พบผู้ป่วย', text: result.message, customClass: { popup: 'swal-app' } })
+      })
+    }
+  } finally {
+    isLookingUp.value = false
+  }
+}
+
+async function submitRemark() {
+  if (!foundPatient.value || isSavingRemark.value) return
+  isSavingRemark.value = true
+  try {
+    const result = await window.api.createStationRemark({
+      patientCNGroupId: foundPatient.value.patientCNGroupId,
+      stationId: foundPatient.value.station.id,
+      reasonId: remarkForm.reasonId || null,
+      remark: remarkForm.remark || null
+    })
+    if (result.success) {
+      remarkForm.cn = ''
+      remarkForm.reasonId = ''
+      remarkForm.remark = ''
+      foundPatient.value = null
+      import('sweetalert2').then(({ default: Swal }) => {
+        Swal.fire({ icon: 'success', title: 'บันทึกหมายเหตุสำเร็จ', timer: 2000, showConfirmButton: false, customClass: { popup: 'swal-app' } })
+      })
+    } else {
+      import('sweetalert2').then(({ default: Swal }) => {
+        Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: result.message, customClass: { popup: 'swal-app' } })
+      })
+    }
+  } finally {
+    isSavingRemark.value = false
+  }
 }
 
 function formatLogTime(t) {

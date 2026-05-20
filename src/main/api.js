@@ -116,6 +116,21 @@ async function sendScanData(barcode, stationId) {
  * @param {number|string} scanId - ID ของ scan record
  * @returns {Promise}
  */
+async function lookupPatient(cn, stationId) {
+  const response = await api.get(`/patient-lookups/lookup?cn=${encodeURIComponent(cn)}&stationId=${stationId}`)
+  return response.data
+}
+
+async function getRemarkReasons() {
+  const response = await api.get('/remark-reasons/active')
+  return { success: true, data: response.data.data || response.data || [] }
+}
+
+async function createStationRemark(data) {
+  const response = await api.post('/station-remarks', data)
+  return response.data
+}
+
 async function cancelScan(scanId) {
   return api.delete(`/scan/${scanId}`)
 }
@@ -135,5 +150,8 @@ module.exports = {
   getStations,
   sendScanData,
   cancelScan,
-  verifyToken
+  verifyToken,
+  lookupPatient,
+  getRemarkReasons,
+  createStationRemark
 }

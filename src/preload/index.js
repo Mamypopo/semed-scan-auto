@@ -82,6 +82,10 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.once('auth:expired', () => callback())
   },
 
+  lookupPatient: (cn, stationId) => ipcRenderer.invoke('patient:lookup', { cn, stationId }),
+  getRemarkReasons: () => ipcRenderer.invoke('remark-reasons:get'),
+  createStationRemark: (data) => ipcRenderer.invoke('station-remark:create', data),
+
   onLog: (callback) => {
     ipcRenderer.on('app:log', (_, data) => callback(data))
   },
