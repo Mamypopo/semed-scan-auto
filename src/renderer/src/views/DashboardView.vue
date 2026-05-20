@@ -366,74 +366,92 @@
 
     <!-- Remark Card -->
     <div class="card">
-      <div class="flex items-center justify-between mb-3 cursor-pointer select-none" @click="showRemarkForm = !showRemarkForm">
-        <p class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest">เพิ่มหมายเหตุ</p>
-        <svg class="w-3.5 h-3.5 text-zinc-300 transition-transform duration-200" :class="showRemarkForm ? 'rotate-180' : ''"
-          fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+      <div class="flex items-center gap-2 mb-3">
+        <svg class="w-3.5 h-3.5 shrink-0" style="color:#696CFF;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
         </svg>
+        <p class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest">เพิ่มหมายเหตุ</p>
       </div>
 
-      <div v-if="showRemarkForm" class="space-y-2.5">
-        <!-- CN.stationId -->
+      <div class="space-y-3">
+
+        <!-- ค้นหา -->
         <div class="flex gap-2">
-          <input v-model="remarkForm.cn" type="text" class="input flex-1 text-xs py-2" placeholder="CN.จุดตรวจ เช่น 691220014.16"
-            @keydown.enter="lookupPatient"/>
-        </div>
-
-        <button @click="lookupPatient" :disabled="!remarkForm.cn || !remarkForm.stationId || isLookingUp"
-          class="w-full py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-40 transition-all"
-          style="background:#696CFF; box-shadow:0 2px 8px -3px rgba(105,108,255,0.5);">
-          {{ isLookingUp ? 'กำลังค้นหา...' : 'ค้นหา' }}
-        </button>
-
-        <!-- Patient found -->
-        <div v-if="foundPatient">
-          <!-- ข้อมูลผู้ป่วย -->
-          <div class="px-3 py-2.5 rounded-xl mb-2" style="background:#f0fdf4; border:1px solid #bbf7d0;">
-            <p class="text-xs font-semibold text-[#09090b]">{{ foundPatient.name }}</p>
-            <div class="flex gap-3 mt-0.5 flex-wrap">
-              <span v-if="foundPatient.hn" class="text-[10px] text-zinc-500">HN: {{ foundPatient.hn }}</span>
-              <span class="text-[10px] text-zinc-500">CN: {{ foundPatient.cn }}</span>
-              <span v-if="foundPatient.station?.name" class="text-[10px] text-zinc-400">{{ foundPatient.station.name }}</span>
-            </div>
-            <!-- รายการตรวจที่จุดนี้ -->
-            <div v-if="foundPatient.examItems?.length" class="mt-1.5 flex flex-wrap gap-1">
-              <span v-for="item in foundPatient.examItems" :key="item.id"
-                class="px-1.5 py-0.5 rounded text-[10px]"
-                style="background:#eef2ff; color:#4338ca; border:1px solid #c7d2fe;">
-                {{ item.name }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Warning: ไม่มีรายการตรวจที่จุดนี้ -->
-          <div v-if="!foundPatient.hasExamAtStation"
-            class="flex items-center gap-2 px-3 py-2 rounded-xl mb-2"
-            style="background:#fffbeb; border:1px solid #fde68a;">
-            <svg class="w-3.5 h-3.5 shrink-0" style="color:#FFAB00;" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          <input v-model="remarkForm.cn" type="text" class="input flex-1 text-xs py-2"
+            placeholder="CN.จุดตรวจ เช่น 691220014.16"
+            @keydown.enter="lookupPatient" />
+          <button @click="lookupPatient" :disabled="!remarkForm.cn || isLookingUp"
+            class="shrink-0 px-3 rounded-xl text-white disabled:opacity-40 transition-all"
+            style="background:#696CFF; box-shadow:0 2px 8px -3px rgba(105,108,255,0.5);">
+            <svg v-if="!isLookingUp" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
-            <p class="text-xs" style="color:#92400e;">ผู้ป่วยไม่มีรายการตรวจที่จุดนี้ ยังสามารถบันทึกหมายเหตุได้</p>
-          </div>
+            <svg v-else class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+          </button>
         </div>
 
-        <!-- Reason + Remark (แสดงเฉพาะเมื่อมีรายการตรวจที่จุดนี้) -->
-        <template v-if="foundPatient && foundPatient.hasExamAtStation">
-          <select v-model="remarkForm.reasonId" class="input text-xs py-2 w-full">
-            <option value="">-- เลือกเหตุผล (ไม่บังคับ) --</option>
-            <option v-for="r in remarkReasons" :key="r.id" :value="r.id">{{ r.title }}</option>
-          </select>
+        <!-- Step 2: ผลการค้นหา -->
+        <div v-if="foundPatient" class="space-y-2">
+          <div class="rounded-xl overflow-hidden" style="border:1px solid #e4e4e7;">
+            <!-- ชื่อผู้ป่วย -->
+            <div class="px-3 py-2.5" style="background:#fafafa;">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <p class="text-xs font-semibold text-zinc-800">{{ foundPatient.name }}</p>
+                  <div class="flex gap-2.5 mt-0.5 flex-wrap">
+                    <span v-if="foundPatient.hn" class="text-[10px] text-zinc-400">HN {{ foundPatient.hn }}</span>
+                    <span class="text-[10px] text-zinc-400">CN {{ foundPatient.cn }}</span>
+                  </div>
+                </div>
+                <span class="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium"
+                  :style="foundPatient.hasExamAtStation
+                    ? 'background:#dcfce7; color:#15803d;'
+                    : 'background:#fef3c7; color:#b45309;'">
+                  {{ foundPatient.hasExamAtStation ? 'มีรายการตรวจ' : 'ไม่มีรายการตรวจ' }}
+                </span>
+              </div>
+            </div>
+            <!-- จุดตรวจ + รายการ -->
+            <div class="px-3 py-2 border-t" style="border-color:#f0f0f0;">
+              <div class="flex items-center gap-1.5 mb-1.5">
+                <svg class="w-3 h-3 text-zinc-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                </svg>
+                <span class="text-[10px] font-medium text-zinc-600">{{ foundPatient.station?.name || '-' }}</span>
+              </div>
+              <div v-if="foundPatient.examItems?.length" class="flex flex-wrap gap-1">
+                <span v-for="item in foundPatient.examItems" :key="item.id"
+                  class="px-1.5 py-0.5 rounded text-[10px]"
+                  style="background:#eef2ff; color:#4338ca; border:1px solid #c7d2fe;">
+                  {{ item.name }}
+                </span>
+              </div>
+              <p v-else class="text-[10px] text-zinc-400">ไม่มีรายการตรวจที่จุดนี้</p>
+            </div>
+          </div>
 
-          <textarea v-model="remarkForm.remark" class="input text-xs py-2 w-full resize-none" rows="2"
-            placeholder="หมายเหตุเพิ่มเติม (ไม่บังคับ)"></textarea>
+          <!-- Step 3: กรอกหมายเหตุ (เฉพาะเมื่อมีรายการตรวจ) -->
+          <template v-if="foundPatient.hasExamAtStation">
+            <div class="space-y-2">
+              <p class="text-[10px] font-medium text-zinc-400">บันทึกหมายเหตุ</p>
+              <select v-model="remarkForm.reasonId" class="input text-xs py-2 w-full">
+                <option value="">-- เลือกเหตุผล (ไม่บังคับ) --</option>
+                <option v-for="r in remarkReasons" :key="r.id" :value="r.id">{{ r.title }}</option>
+              </select>
+              <textarea v-model="remarkForm.remark" class="input text-xs py-2 w-full resize-none" rows="2"
+                placeholder="หมายเหตุเพิ่มเติม (ไม่บังคับ)"></textarea>
+              <button @click="submitRemark" :disabled="isSavingRemark"
+                class="w-full py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-40 transition-all"
+                style="background:#696CFF; box-shadow:0 2px 8px -3px rgba(105,108,255,0.5);">
+                {{ isSavingRemark ? 'กำลังบันทึก...' : 'บันทึกหมายเหตุ' }}
+              </button>
+            </div>
+          </template>
+        </div>
 
-          <button @click="submitRemark" :disabled="isSavingRemark"
-            class="w-full py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-40 transition-all"
-            style="background:#71DD37; box-shadow:0 2px 8px -3px rgba(113,221,55,0.5);">
-            {{ isSavingRemark ? 'กำลังบันทึก...' : 'บันทึกหมายเหตุ' }}
-          </button>
-        </template>
       </div>
     </div>
 
@@ -456,7 +474,6 @@ const isReady = computed(() =>
 
 const showStationSelect = ref(false)
 const showLogs = ref(false)
-const showRemarkForm = ref(false)
 
 // Remark form
 const remarkForm = reactive({ cn: '', stationId: '', reasonId: '', remark: '' })
