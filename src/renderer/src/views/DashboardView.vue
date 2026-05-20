@@ -399,7 +399,7 @@
             <!-- ชื่อผู้ป่วย -->
             <div class="px-3 py-2.5" style="background:#fafafa;">
               <div class="flex items-start justify-between gap-2">
-                <div>
+                <div class="min-w-0">
                   <p class="text-xs font-semibold text-zinc-800">{{ foundPatient.name }}</p>
                   <div class="flex gap-2.5 mt-0.5 flex-wrap">
                     <span v-if="foundPatient.hn" class="text-[10px] text-zinc-400">HN {{ foundPatient.hn }}</span>
@@ -413,6 +413,25 @@
                   {{ foundPatient.hasExamAtStation ? 'มีรายการตรวจ' : 'ไม่มีรายการตรวจ' }}
                 </span>
               </div>
+              <!-- รหัสพนักงาน / ตำแหน่ง / แผนก / บริษัท -->
+              <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+                <div v-if="foundPatient.employeeCode">
+                  <p class="text-[9px] text-zinc-400 uppercase tracking-wide">รหัสพนักงาน</p>
+                  <p class="text-[10px] text-zinc-600 font-medium">{{ foundPatient.employeeCode }}</p>
+                </div>
+                <div v-if="foundPatient.position">
+                  <p class="text-[9px] text-zinc-400 uppercase tracking-wide">ตำแหน่ง</p>
+                  <p class="text-[10px] text-zinc-600 font-medium">{{ foundPatient.position }}</p>
+                </div>
+                <div v-if="foundPatient.department">
+                  <p class="text-[9px] text-zinc-400 uppercase tracking-wide">แผนก</p>
+                  <p class="text-[10px] text-zinc-600 font-medium">{{ foundPatient.department }}</p>
+                </div>
+                <div v-if="foundPatient.companyName">
+                  <p class="text-[9px] text-zinc-400 uppercase tracking-wide">บริษัท</p>
+                  <p class="text-[10px] text-zinc-600 font-medium">{{ foundPatient.companyName }}</p>
+                </div>
+              </div>
             </div>
             <!-- จุดตรวจ + รายการ -->
             <div class="px-3 py-2 border-t" style="border-color:#f0f0f0;">
@@ -424,9 +443,9 @@
               </div>
               <div v-if="foundPatient.examItems?.length" class="flex flex-wrap gap-1">
                 <span v-for="item in foundPatient.examItems" :key="item.id"
-                  class="px-1.5 py-0.5 rounded text-[10px]"
+                  class="px-1.5 py-0.5 rounded text-[10px] leading-tight"
                   style="background:#eef2ff; color:#4338ca; border:1px solid #c7d2fe;">
-                  {{ item.name }}
+                  {{ item.name }}<span v-if="item.nameEn" class="opacity-60"> · {{ item.nameEn }}</span>
                 </span>
               </div>
               <p v-else class="text-[10px] text-zinc-400">ไม่มีรายการตรวจที่จุดนี้</p>
@@ -549,10 +568,20 @@ async function lookupPatient() {
         const r = await window.api.getRemarkReasons()
         if (r.success) remarkReasons.value = r.data
       }
-      // pre-fill remark เดิม ถ้ามี
       const ex = result.data.existingRemark
       remarkForm.reasonId = ex?.reasonId || ''
       remarkForm.remark = ex?.remark || ''
+      if (ex) {
+        const { default: Swal } = await import('sweetalert2')
+        await Swal.fire({
+          icon: 'info',
+          title: 'มีหมายเหตุอยู่แล้ว',
+          html: `${ex.reasonTitle ? `<div class="text-sm text-zinc-500 mb-1">เหตุผล: <b>${ex.reasonTitle}</b></div>` : ''}${ex.remark ? `<div class="text-sm">"${ex.remark}"</div>` : '<div class="text-sm text-zinc-400">ไม่มีข้อความหมายเหตุ</div>'}`,
+          confirmButtonText: 'แก้ไขหมายเหตุ',
+          confirmButtonColor: '#696CFF',
+          customClass: { popup: 'swal-app' }
+        })
+      }
     } else {
       import('sweetalert2').then(({ default: Swal }) => {
         Swal.fire({ icon: 'warning', title: 'ไม่พบผู้ป่วย', text: result.message, customClass: { popup: 'swal-app' } })

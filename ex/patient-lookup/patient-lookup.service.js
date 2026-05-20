@@ -13,8 +13,9 @@ export const lookupPatientByCN = async (cn, stationId) => {
       id: true,
       cn: true,
       employeeCode: true,
-      companyName: true,
+      position: true,
       department: true,
+      companyName: true,
       patient: {
         select: {
           id: true,
@@ -43,7 +44,7 @@ export const lookupPatientByCN = async (cn, stationId) => {
     select: {
       id: true,
       medicalItem: {
-        select: { id: true, name: true, code: true }
+        select: { id: true, name: true, nameEn: true, code: true }
       }
     }
   })
@@ -70,18 +71,20 @@ export const lookupPatientByCN = async (cn, stationId) => {
   })
 
   return {
-    patientCNGroupId: membership.id,   // ← ใช้ตอน POST /station-remarks
+    patientCNGroupId: membership.id,
     cn: membership.cn,
-    employeeCode: membership.employeeCode,
     name: `${membership.patient?.prefix || ''} ${membership.patient?.first_name || ''} ${membership.patient?.last_name || ''}`.trim(),
     hn: membership.patient?.hn || null,
-    companyName: membership.companyName,
-    department: membership.department,
+    employeeCode: membership.employeeCode || null,
+    position: membership.position || null,
+    department: membership.department || null,
+    companyName: membership.companyName || null,
     station,
     hasExamAtStation: examItems.length > 0,
     examItems: examItems.map(e => ({
       id: e.id,
       name: e.medicalItem.name,
+      nameEn: e.medicalItem.nameEn || null,
       code: e.medicalItem.code
     })),
     existingRemark: existingRemark
