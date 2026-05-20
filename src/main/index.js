@@ -355,6 +355,63 @@ ipcMain.handle('scan:set-cancel-mode', (event, enabled) => {
   return { success: true }
 })
 
+ipcMain.handle('auth:microsoft', async () => {
+  return new Promise((resolve) => {
+    const authWindow = new BrowserWindow({
+      width: 480,
+      height: 660,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        partition: 'persist:ms-auth'
+      },
+      parent: mainWindow,
+      modal: true,
+      title: 'Microsoft Login',
+      autoHideMenuBar: true
+    })
+    authWindow.setMenu(null)
+
+    let resolved = false
+    const finish = (result) => {
+      if (resolved) return
+      resolved = true
+      if (!authWindow.isDestroyed()) authWindow.close()
+      resolve(result)
+    }
+
+    const checkUrl = (url) => {
+      try {
+        const u = new URL(url)
+        const token = u.searchParams.get('token')
+        const error = u.searchParams.get('error')
+        const message = u.searchParams.get('message')
+        if (token) {
+          sendLog('success', 'Microsoft Login สำเร็จ')
+          finish({ success: true, token })
+        } else if (error) {
+          const msg = message ? decodeURIComponent(message) : error
+          sendLog('error', `Microsoft Login ล้มเหลว: ${msg}`)
+          finish({ success: false, message: msg })
+        }
+      } catch {}
+    }
+
+    authWindow.webContents.on('will-redirect', (_, url) => checkUrl(url))
+    authWindow.webContents.on('will-navigate', (_, url) => checkUrl(url))
+    authWindow.webContents.on('did-navigate', (_, url) => checkUrl(url))
+    authWindow.webContents.on('did-fail-load', (_, code, desc) => {
+      sendLog('error', `Microsoft Login โหลดไม่ได้ (${code})`, desc)
+      finish({ success: false, message: `เชื่อมต่อ server ไม่ได้ กรุณาตรวจสอบ backend (${desc})` })
+    })
+    authWindow.on('closed', () => finish({ success: false, message: 'ปิดหน้าต่างก่อนเข้าสู่ระบบ' }))
+
+    const msUrl = `${getApiBaseUrl()}/auth/microsoft`
+    sendLog('info', 'เปิดหน้า Microsoft Login', msUrl)
+    authWindow.loadURL(msUrl)
+  })
+})
+
 ipcMain.handle('stations:get', async () => {
   try {
     const result = await getStations()

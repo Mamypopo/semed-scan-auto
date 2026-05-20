@@ -6,7 +6,7 @@ const Toast = Swal.mixin({
   toast: true,
   position: 'top-end',
   showConfirmButton: false,
-  timer: 4000,
+  timer: 10000,
   timerProgressBar: true,
   customClass: {
     popup: 'swal-app'
@@ -24,6 +24,22 @@ export const useScannerStore = defineStore('scanner', () => {
 
   async function cancelScan(scan) {
     if (!scan?.scanId || scan?.cancelled) return
+
+    const ts = scan.timestamp
+      ? new Date(scan.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      : ''
+    const confirmed = await Swal.fire({
+      title: 'ยืนยันการยกเลิก',
+      html: `ผู้ป่วย: <b>${scan.patientName || ''}</b><br><span style="font-size:0.8em;color:#71717a;">เวลา: ${ts}</span>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'ยกเลิกการสแกน',
+      cancelButtonText: 'ปิด',
+      confirmButtonColor: '#FF5151',
+      customClass: { popup: 'swal-app' }
+    })
+    if (!confirmed.isConfirmed) return
+
     cancellingId.value = scan.scanId
     try {
       const result = await window.api.cancelScan(scan.scanId)

@@ -6,7 +6,7 @@ const Toast = Swal.mixin({
   toast: true,
   position: 'top-end',
   showConfirmButton: false,
-  timer: 3000,
+  timer: 4000,
   timerProgressBar: true,
   customClass: {
     popup: 'swal-app'
@@ -119,6 +119,44 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function loginWithMicrosoft() {
+    isLoading.value = true
+    try {
+      const result = await window.api.loginMicrosoft()
+      if (!result.success) {
+        throw new Error(result.message || 'เข้าสู่ระบบด้วย Microsoft ไม่สำเร็จ')
+      }
+
+      token.value = result.token
+      await window.api.saveConfig({ token: result.token })
+
+      const verify = await window.api.verifyToken()
+      if (verify.success) {
+        const userData = verify.data?.user
+        user.value = userData ? {
+          id: userData.id,
+          name: userData.name,
+          email: userData.email,
+          role: userData.role,
+          permissions: userData.permissions || []
+        } : null
+      }
+
+      Toast.fire({ icon: 'success', title: `ยินดีต้อนรับ ${user.value?.name || ''}` })
+      return { success: true }
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'เข้าสู่ระบบไม่สำเร็จ',
+        text: error.message,
+        customClass: { popup: 'swal-app' }
+      })
+      return { success: false, error }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   async function logout() {
     await window.api.clearConfig()
     user.value = null
@@ -143,6 +181,7 @@ export const useAuthStore = defineStore('auth', () => {
     toggleStation,
     toggleScanInputMode,
     login,
+    loginWithMicrosoft,
     verifyToken,
     logout
   }

@@ -49,6 +49,30 @@
           {{ authStore.isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ' }}
         </button>
       </form>
+
+      <div class="relative my-4">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-zinc-100"></div>
+        </div>
+        <div class="relative flex justify-center">
+          <span class="bg-white px-2 text-[11px] text-zinc-400">หรือ</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        @click="handleMicrosoftLogin"
+        :disabled="authStore.isLoading"
+        class="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium border border-zinc-200 text-zinc-600 hover:bg-zinc-50 transition-all disabled:opacity-50"
+      >
+        <svg class="w-4 h-4 shrink-0" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
+          <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
+          <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
+          <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+        </svg>
+        เข้าสู่ระบบด้วย Microsoft
+      </button>
     </div>
   </div>
 </template>
@@ -63,5 +87,9 @@ const form = reactive({ email: '', password: '', rememberMe: false })
 
 async function handleLogin() {
   await authStore.login(form.email, form.password, form.rememberMe)
+}
+
+async function handleMicrosoftLogin() {
+  await authStore.loginWithMicrosoft()
 }
 </script>

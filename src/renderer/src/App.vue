@@ -17,7 +17,7 @@
 
         <!-- Right -->
         <div v-if="authStore.isAuthenticated" class="flex items-center gap-2">
-          <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-50 border border-zinc-200/80">
+          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-50 border border-zinc-200/80">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
             <span class="text-xs text-zinc-500 font-medium">{{ authStore.user?.name }}</span>
           </div>

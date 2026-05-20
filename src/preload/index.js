@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld('api', {
    * @returns {Promise<Object>} - { success, data: { user }, message }
    */
   verifyToken: () => ipcRenderer.invoke('auth:verify'),
+  loginMicrosoft: () => ipcRenderer.invoke('auth:microsoft'),
   
   // ============ Station APIs ============
   
