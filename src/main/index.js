@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, Notification, Menu } = require('electron')
+const { autoUpdater } = require('electron-updater')
 const path = require('path')
 const notifier = require('node-notifier')
 
@@ -464,12 +465,75 @@ ipcMain.handle('station-remark:create', async (event, data) => {
 // App Lifecycle
 // ==========================================
 
+// ==========================================
+// Auto Updater
+// ==========================================
+
+function setupAutoUpdater() {
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('checking-for-update', () => {
+    sendLog('info', 'กำลังตรวจสอบอัพเดท...')
+  })
+
+  autoUpdater.on('update-available', (info) => {
+    sendLog('info', `พบเวอร์ชันใหม่: ${info.version}`)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:status', { type: 'available', version: info.version })
+    }
+  })
+
+  autoUpdater.on('update-not-available', () => {
+    sendLog('info', 'แอปเป็นเวอร์ชันล่าสุดแล้ว')
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:status', { type: 'not-available' })
+    }
+  })
+
+  autoUpdater.on('download-progress', (progress) => {
+    const pct = Math.round(progress.percent)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:status', { type: 'downloading', percent: pct })
+    }
+  })
+
+  autoUpdater.on('update-downloaded', (info) => {
+    sendLog('success', `ดาวน์โหลดอัพเดทเสร็จ: ${info.version} — พร้อมติดตั้ง`)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:status', { type: 'downloaded', version: info.version })
+    }
+  })
+
+  autoUpdater.on('error', (err) => {
+    sendLog('error', 'ตรวจสอบอัพเดทล้มเหลว', err.message)
+  })
+}
+
+ipcMain.handle('updater:check', async () => {
+  try {
+    await autoUpdater.checkForUpdates()
+    return { success: true }
+  } catch (err) {
+    return { success: false, message: err.message }
+  }
+})
+
+ipcMain.handle('updater:install', () => {
+  autoUpdater.quitAndInstall()
+})
+
 app.whenReady().then(() => {
   createWindow()
   initScanner(handleScan)
 
   mainWindow.webContents.once('did-finish-load', () => {
     sendLog('info', 'แอปเริ่มต้นแล้ว', `API: ${getApiBaseUrl()}`)
+    const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev')
+    if (!isDev) {
+      setupAutoUpdater()
+      autoUpdater.checkForUpdates().catch(() => {})
+    }
   })
 
   app.on('activate', () => {

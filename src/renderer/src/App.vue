@@ -34,6 +34,38 @@
       </div>
     </header>
 
+    <!-- Update Banner -->
+    <div v-if="updateStatus.type === 'available' || updateStatus.type === 'downloading' || updateStatus.type === 'downloaded'"
+      class="sticky top-12 z-40 px-4 py-2 flex items-center justify-between gap-3"
+      :style="updateStatus.type === 'downloaded'
+        ? 'background:#696CFF; color:#fff;'
+        : 'background:#fffbeb; border-bottom:1px solid #fde68a;'">
+      <div class="flex items-center gap-2 text-xs">
+        <svg v-if="updateStatus.type !== 'downloading'" class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        <svg v-else class="w-3.5 h-3.5 shrink-0 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <span v-if="updateStatus.type === 'available'" style="color:#92400e;">
+          พบเวอร์ชันใหม่ {{ updateStatus.version }} — กำลังดาวน์โหลด...
+        </span>
+        <span v-else-if="updateStatus.type === 'downloading'" style="color:#92400e;">
+          ดาวน์โหลดอัพเดท {{ updateStatus.percent }}%
+        </span>
+        <span v-else>
+          อัพเดทพร้อมแล้ว ({{ updateStatus.version }}) — รีสตาร์ทเพื่อติดตั้ง
+        </span>
+      </div>
+      <button v-if="updateStatus.type === 'downloaded'"
+        @click="window.api.installUpdate()"
+        class="shrink-0 px-3 py-1 rounded-lg text-xs font-semibold"
+        style="background:rgba(255,255,255,0.25); color:#fff;">
+        รีสตาร์ทเดี๋ยวนี้
+      </button>
+    </div>
+
     <!-- Main -->
     <main class="max-w-lg mx-auto px-4 py-4">
       <div v-if="isInitializing" class="flex items-center justify-center py-20">
@@ -48,7 +80,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useAuthStore } from './stores/auth'
 import Swal from 'sweetalert2'
 import { useScanner } from './composables/useScanner'
@@ -57,6 +89,7 @@ import DashboardView from './views/DashboardView.vue'
 
 const authStore = useAuthStore()
 const isInitializing = ref(true)
+const updateStatus = reactive({ type: null, version: null, percent: 0 })
 useScanner()
 
 async function handleLogout() {
@@ -66,6 +99,12 @@ async function handleLogout() {
 onMounted(async () => {
   await authStore.verifyToken()
   isInitializing.value = false
+
+  window.api.onUpdaterStatus((data) => {
+    updateStatus.type = data.type
+    if (data.version) updateStatus.version = data.version
+    if (data.percent !== undefined) updateStatus.percent = data.percent
+  })
 
   window.api.onAuthExpired(async () => {
     await authStore.logout()

@@ -1,6 +1,6 @@
 {
   "name": "semed-scanner",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "src/main/index.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:renderer\" \"wait-on http://localhost:5173 && npm run dev:electron\"",
@@ -20,6 +20,7 @@
     "axios": "^1.13.6",
     "dotenv": "^16.4.5",
     "electron-store": "^11.0.2",
+    "electron-updater": "^6.8.3",
     "koffi": "^2.16.2",
     "node-notifier": "^10.0.1"
   },
@@ -47,9 +48,19 @@
     ],
     "win": {
       "target": [
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "assets/icon.ico"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Mamypopo",
+      "repo": "semed-scan-auto"
     },
     "nsis": {
       "oneClick": false,
