@@ -13,6 +13,7 @@
             style="background: linear-gradient(135deg, #696CFF, #5558e3); box-shadow: 0 2px 8px -2px rgba(105,108,255,0.5);"
           >S</div>
           <span class="text-sm font-semibold text-[#09090b] tracking-tight">SEMed <span class="font-normal text-zinc-400">Scanner</span></span>
+          <span class="text-[10px] text-zinc-300 font-normal">v{{ appVersion }}</span>
         </div>
 
         <!-- Right -->
@@ -90,6 +91,7 @@ import DashboardView from './views/DashboardView.vue'
 const authStore = useAuthStore()
 const isInitializing = ref(true)
 const updateStatus = reactive({ type: null, version: null, percent: 0 })
+const appVersion = __APP_VERSION__
 useScanner()
 
 async function handleLogout() {
