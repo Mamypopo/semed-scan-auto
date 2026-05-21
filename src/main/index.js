@@ -470,7 +470,7 @@ ipcMain.handle('station-remark:create', async (event, data) => {
 // ==========================================
 
 function setupAutoUpdater() {
-  autoUpdater.autoDownload = true
+  autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
 
   autoUpdater.on('checking-for-update', () => {
@@ -517,6 +517,10 @@ ipcMain.handle('updater:check', async () => {
   } catch (err) {
     return { success: false, message: err.message }
   }
+})
+
+ipcMain.handle('updater:download', () => {
+  autoUpdater.downloadUpdate()
 })
 
 ipcMain.handle('updater:install', () => {

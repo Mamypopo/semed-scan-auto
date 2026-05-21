@@ -50,17 +50,23 @@
           <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
         </svg>
         <span v-if="updateStatus.type === 'available'" style="color:#92400e;">
-          พบเวอร์ชันใหม่ {{ updateStatus.version }} — กำลังดาวน์โหลด...
+          พบเวอร์ชันใหม่ {{ updateStatus.version }}
         </span>
         <span v-else-if="updateStatus.type === 'downloading'" style="color:#92400e;">
           ดาวน์โหลดอัพเดท {{ updateStatus.percent }}%
         </span>
-        <span v-else>
-          อัพเดทพร้อมแล้ว ({{ updateStatus.version }}) — รีสตาร์ทเพื่อติดตั้ง
+        <span v-else style="color:#fff;">
+          อัพเดทพร้อมแล้ว ({{ updateStatus.version }})
         </span>
       </div>
-      <button v-if="updateStatus.type === 'downloaded'"
-        @click="window.api.installUpdate()"
+      <button v-if="updateStatus.type === 'available'"
+        @click="downloadUpdate"
+        class="shrink-0 px-3 py-1 rounded-lg text-xs font-semibold"
+        style="background:#FFAB00; color:#fff;">
+        ดาวน์โหลด
+      </button>
+      <button v-else-if="updateStatus.type === 'downloaded'"
+        @click="installUpdate"
         class="shrink-0 px-3 py-1 rounded-lg text-xs font-semibold"
         style="background:rgba(255,255,255,0.25); color:#fff;">
         รีสตาร์ทเดี๋ยวนี้
@@ -96,6 +102,16 @@ useScanner()
 
 async function handleLogout() {
   await authStore.logout()
+}
+
+function downloadUpdate() {
+  window.api.downloadUpdate()
+  updateStatus.type = 'downloading'
+  updateStatus.percent = 0
+}
+
+function installUpdate() {
+  window.api.installUpdate()
 }
 
 onMounted(async () => {
