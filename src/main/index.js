@@ -532,7 +532,11 @@ app.whenReady().then(() => {
     const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev')
     if (!isDev) {
       setupAutoUpdater()
-      autoUpdater.checkForUpdates().catch(() => {})
+      setTimeout(() => {
+        autoUpdater.checkForUpdates().catch((err) => {
+          sendLog('error', 'ตรวจสอบอัพเดทล้มเหลว', err.message)
+        })
+      }, 3000)
     }
   })
 
