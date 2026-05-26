@@ -18,27 +18,28 @@ export const useScannerStore = defineStore('scanner', () => {
   const isScanning = ref(false)
   const lastScan = ref(null)
   const cancellingId = ref(null)
-  const cancelMode = ref(false)
 
   const recentScans = computed(() => scanHistory.value.slice(0, 20))
 
-  async function cancelScan(scan) {
+  async function cancelScan(scan, skipConfirm = false) {
     if (!scan?.scanId || scan?.cancelled) return
 
-    const ts = scan.timestamp
-      ? new Date(scan.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      : ''
-    const confirmed = await Swal.fire({
-      title: 'ยืนยันการยกเลิก',
-      html: `ผู้ป่วย: <b>${scan.patientName || ''}</b><br><span style="font-size:0.8em;color:#71717a;">เวลา: ${ts}</span>`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'ยกเลิกการสแกน',
-      cancelButtonText: 'ปิด',
-      confirmButtonColor: '#FF5151',
-      customClass: { popup: 'swal-app' }
-    })
-    if (!confirmed.isConfirmed) return
+    if (!skipConfirm) {
+      const ts = scan.timestamp
+        ? new Date(scan.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        : ''
+      const confirmed = await Swal.fire({
+        title: 'ยืนยันการยกเลิก',
+        html: `ผู้ป่วย: <b>${scan.patientName || ''}</b><br><span style="font-size:0.8em;color:#71717a;">เวลา: ${ts}</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'ยกเลิกการสแกน',
+        cancelButtonText: 'ปิด',
+        confirmButtonColor: '#FF5151',
+        customClass: { popup: 'swal-app' }
+      })
+      if (!confirmed.isConfirmed) return
+    }
 
     cancellingId.value = scan.scanId
     try {
@@ -60,47 +61,12 @@ export const useScannerStore = defineStore('scanner', () => {
     }
   }
 
-  async function toggleCancelMode() {
-    cancelMode.value = !cancelMode.value
-    await window.api.setCancelMode(cancelMode.value)
-  }
-
-  async function handleCancelLookup({ cn }) {
-    const found = scanHistory.value.find(
-      s => s.success && !s.cancelled && s.data?.membership?.cn === cn
-    )
-    if (!found) {
-      Toast.fire({ icon: 'warning', title: `ไม่พบการสแกน: ${cn}` })
-      return
-    }
-    const ts = found.timestamp
-      ? new Date(found.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      : ''
-    const result = await Swal.fire({
-      title: 'ยืนยันการยกเลิก',
-      html: `ผู้ป่วย: <b>${found.patientName}</b><br><span style="font-size:0.8em;color:#71717a">เวลา: ${ts}</span>`,
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'ยกเลิกการสแกน',
-      cancelButtonText: 'ปิด',
-      confirmButtonColor: '#ef4444',
-      customClass: { popup: 'swal-app' }
-    })
-    if (result.isConfirmed) {
-      await cancelScan(found)
-    }
-  }
-
   function clearHistory() {
     scanHistory.value = []
     lastScan.value = null
   }
 
   function setupIPCListeners() {
-    window.api.onCancelLookup((data) => {
-      handleCancelLookup(data)
-    })
-
     window.api.onScanSuccess((data) => {
       isScanning.value = false
       const p = data?.data?.patient
@@ -153,10 +119,8 @@ export const useScannerStore = defineStore('scanner', () => {
     isScanning,
     lastScan,
     cancellingId,
-    cancelMode,
     recentScans,
     cancelScan,
-    toggleCancelMode,
     clearHistory,
     setupIPCListeners
   }

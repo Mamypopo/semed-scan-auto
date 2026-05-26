@@ -284,38 +284,10 @@
       </div>
     </div>
 
-    <!-- Scan / Cancel panel -->
-    <div class="card transition-all duration-300"
-      :style="scannerStore.cancelMode ? 'border-color:#fecaca;' : ''">
+    <!-- Scan panel -->
+    <div class="card">
 
       <div class="flex gap-2 mb-3">
-        <!-- Scan / Cancel -->
-        <div class="flex gap-0.5 p-1 rounded-xl flex-1 bg-zinc-100">
-          <button
-            @click="scannerStore.cancelMode && scannerStore.toggleCancelMode()"
-            class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
-            :class="!scannerStore.cancelMode ? 'bg-white text-[#09090b] shadow-sm' : 'text-zinc-400 hover:text-zinc-600'"
-          >
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
-            </svg>
-            สแกน
-          </button>
-          <button
-            @click="!scannerStore.cancelMode && scannerStore.toggleCancelMode()"
-            class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 text-white"
-            :class="!scannerStore.cancelMode && 'text-zinc-400 hover:text-zinc-600'"
-            :style="scannerStore.cancelMode ? 'background:#FF5151;' : 'color:#a1a1aa;'"
-          >
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-            </svg>
-            ยกเลิก
-          </button>
-        </div>
-
         <!-- Auto / Manual -->
         <div class="flex gap-0.5 p-1 rounded-xl flex-1 bg-zinc-100">
           <button
@@ -348,18 +320,16 @@
           v-model="testBarcode"
           type="text"
           class="input flex-1 text-xs py-2"
-          :placeholder="scannerStore.cancelMode ? 'สแกน/พิมพ์ barcode เพื่อยกเลิก' : 'พิมพ์หรือสแกน barcode'"
+          placeholder="พิมพ์หรือสแกน barcode"
           @keydown.enter="runTestScan"
         />
         <button
           @click="runTestScan"
           :disabled="!testBarcode || isTestLoading"
           class="shrink-0 px-4 py-2 rounded-xl text-white text-xs font-semibold disabled:opacity-40 transition-all"
-          :style="scannerStore.cancelMode
-            ? 'background:#FF5151;'
-            : 'background:#696CFF; box-shadow:0 2px 8px -3px rgba(105,108,255,0.5);'"
+          style="background:#696CFF; box-shadow:0 2px 8px -3px rgba(105,108,255,0.5);"
         >
-          {{ isTestLoading ? '...' : scannerStore.cancelMode ? 'ยกเลิก' : 'สแกน' }}
+          {{ isTestLoading ? '...' : 'สแกน' }}
         </button>
       </div>
     </div>

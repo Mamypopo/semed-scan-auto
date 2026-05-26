@@ -87,6 +87,14 @@ async function getStations() {
   }
 }
 
+async function getCNGroups() {
+  const response = await api.get('/cngroups/dropdown?isActive=true&limit=100')
+  return {
+    success: true,
+    data: response.data.data || response.data || []
+  }
+}
+
 // ==========================================
 // Scan APIs
 // ==========================================
@@ -148,6 +156,7 @@ module.exports = {
   api,
   login,
   getStations,
+  getCNGroups,
   sendScanData,
   cancelScan,
   verifyToken,

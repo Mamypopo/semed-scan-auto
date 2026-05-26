@@ -66,24 +66,32 @@ function notifySuccess(data) {
     ? `${p.prefix || ''} ${p.first_name || ''} ${p.last_name || ''}`.trim()
     : data?.patientName || 'ไม่ทราบชื่อ'
   
-  if (data?.isNewScan !== false) {
-    if (Notification.isSupported()) {
-      new Notification({
-        title: '✅ สแกนสำเร็จ',
-        body: `ผู้ป่วย: ${patientName}`,
-        icon: path.join(__dirname, '../../assets/icon.png'),
-        silent: !isSoundEnabled(),
-        timeoutType: 'default'
-      }).show()
-    } else {
-      notifier.notify({
-        title: '✅ สแกนสำเร็จ',
-        message: `ผู้ป่วย: ${patientName}`,
-        icon: path.join(__dirname, '../../assets/icon.png'),
-        sound: isSoundEnabled(),
-        wait: false
-      })
-    }
+  const isDuplicate = data?.isNewScan === false
+  const title = isDuplicate ? '🔁 สแกนซ้ำ' : '✅ สแกนสำเร็จ'
+  const cn = data?.membership?.cn || ''
+  const stationName = data?.station?.name || ''
+  const body = [
+    `ผู้ป่วย: ${patientName}`,
+    cn ? `CN: ${cn}` : null,
+    stationName ? `จุดตรวจ: ${stationName}` : null
+  ].filter(Boolean).join('\n')
+
+  if (Notification.isSupported()) {
+    new Notification({
+      title,
+      body,
+      icon: path.join(__dirname, '../../assets/icon.png'),
+      silent: !isSoundEnabled(),
+      timeoutType: 'default'
+    }).show()
+  } else {
+    notifier.notify({
+      title,
+      message: body,
+      icon: path.join(__dirname, '../../assets/icon.png'),
+      sound: isSoundEnabled(),
+      wait: false
+    })
   }
   
   sendLog('success', `สแกนสำเร็จ: ${patientName}`, data?.station?.name ? `Station: ${data.station.name}` : null)
@@ -172,7 +180,6 @@ function notifyError(error) {
 
 let lastScanBarcode = ''
 let lastScanTime = 0
-let isCancelMode = false
 
 async function handleScan(barcode) {
   // ออกจาก koffi hook callback context ก่อน เพื่อให้ Electron API ทำงานได้ปลอดภัย
@@ -215,15 +222,6 @@ async function handleScan(barcode) {
         console.log(`🔍 [Manual] cn="${cn}" stations=${JSON.stringify(stationIds)}`)
       }
     }
-  }
-
-  // Cancel mode: ส่ง CN ไป renderer ให้ค้นหาและยืนยันยกเลิก
-  if (isCancelMode) {
-    console.log(`🔍 Cancel mode — lookup cn="${cn}"`)
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('scan:lookup-request', { cn, timestamp: new Date().toISOString() })
-    }
-    return
   }
 
   console.log(`🔎 mode="${inputMode}" stationIds=${JSON.stringify(stationIds)} cn="${cn}"`)
@@ -348,12 +346,6 @@ ipcMain.handle('scan:cancel', async (event, scanId) => {
       status: error.response?.status
     }
   }
-})
-
-ipcMain.handle('scan:set-cancel-mode', (event, enabled) => {
-  isCancelMode = !!enabled
-  console.log(`🔄 Cancel mode: ${isCancelMode ? 'ON' : 'OFF'}`)
-  return { success: true }
 })
 
 ipcMain.handle('auth:microsoft', async () => {
