@@ -109,7 +109,8 @@ export const useAuthStore = defineStore('auth', () => {
         if (Array.isArray(config.stationIds) && config.stationIds.length > 0) {
           selectedStations.value = config.stationIds.map(id => ({ id, name: '' }))
         }
-        if (config.scanInputMode) scanInputMode.value = config.scanInputMode
+        scanInputMode.value = 'manual'
+        await window.api.saveConfig({ scanInputMode: 'manual' })
         return true
       }
       return false

@@ -6,7 +6,7 @@ const store = new Store({
     token: '',
     stationIds: '[]',
     baseUrl: '',
-    scanInputMode: 'auto'
+    scanInputMode: 'manual'
   }
 })
 
