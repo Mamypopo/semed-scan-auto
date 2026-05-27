@@ -112,7 +112,8 @@ async function sendScanData(barcode, stationId) {
 
   const payload = {
     cn: barcode,
-    stationId: parseInt(stationId)
+    stationId: parseInt(stationId),
+    scanType: 'WINAPP'
   }
 
   console.log(`📡 Sending scan to /scan/checkpoint (station ${stationId}):`, payload)

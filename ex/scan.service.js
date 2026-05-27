@@ -1277,7 +1277,8 @@ export const getScanItemsByMembership = async (membershipId, options = {}) => {
     const {
       page = 1,
       limit = 20,
-      isCancelled = undefined, // undefined = แสดงทั้งหมด, false = ไม่ยกเลิก, true = ยกเลิก
+      isCancelled = undefined,
+      membershipType = 'cn', // 'cn' | 'clinic'
     } = options;
 
     if (!membershipId) {
@@ -1285,16 +1286,15 @@ export const getScanItemsByMembership = async (membershipId, options = {}) => {
     }
 
     const skip = (page - 1) * limit;
+    const registrationFilter = membershipType === 'clinic'
+      ? { patientMembershipId: membershipId, isCancelled: false }
+      : { patientCNGroupId: membershipId, type: "CHECKUP", isCancelled: false };
+
     const where = {
-      // isCancelled: undefined = แสดงทั้งหมด, false = ไม่ยกเลิก, true = ยกเลิก
       ...(isCancelled !== undefined && isCancelled !== null
         ? { isCancelled: isCancelled === true || isCancelled === "true" }
         : {}),
-      registration: {
-        patientCNGroupId: membershipId,
-        type: "CHECKUP",
-        isCancelled: false,
-      },
+      registration: registrationFilter,
     };
 
     const [scanItems, total] = await Promise.all([
@@ -2839,7 +2839,7 @@ export const getPatientsByStationForCustomer = async (cnGroupId, stationId, opti
           stationId: stationIdInt,
           isCancelled: false,
           registration: {
-            patientCNGroup: { cnGroupId, ...companyFilter },
+            patientCNGroupId: { in: stationMembershipIds },
             type: "CHECKUP",
             isCancelled: false,
           },

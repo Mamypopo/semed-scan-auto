@@ -15,8 +15,13 @@ import {
   getRegisteringUsers as getRegisteringUsersService,
 } from "./scan.service.js";
 import { createScanItemLog } from "../Loggers/scanItemLogger.js";
-import { createSystemLog } from '../utils/logger.js'
+import { createSystemLog } from "../utils/logger.js";
 import { emitScanAndCustomerDashboardUpdate } from "../socket/socket.service.js";
+
+import {
+  getCustomerAllowedCompanies,
+  enforceCompanies,
+} from "../utils/customer-auth.js";
 
 export const scanController = {
   /**
@@ -26,7 +31,7 @@ export const scanController = {
   async scanCheckpoint(req, res, next) {
     try {
       const userId = req.user?.id;
-      const { cn, stationId, cnGroupId, deleteRemark = false } = req.body;
+      const { cn, stationId, cnGroupId, deleteRemark = false, scanType } = req.body;
 
       if (!cn) {
         return res.status(400).json({
@@ -41,6 +46,7 @@ export const scanController = {
         userId,
         cnGroupId,
         deleteRemark,
+        scanType,
       });
 
       if (!result.success) {
@@ -71,15 +77,22 @@ export const scanController = {
       }
 
       // Emit WebSocket event สำหรับ real-time dashboard update
+      // const emitCNGroupId =
+      //   cnGroupId ||
+      //   result.membership?.cnGroup?.id ||
+      //   result.membership?.cnGroupId;
       const emitCNGroupId =
         cnGroupId ||
-        result.membership?.cnGroup?.id ||
-        result.membership?.cnGroupId;
+        result.membership?.cnGroupId ||
+        result.membership?.cnGroup?.id;
       if (emitCNGroupId) {
         const io = req.app.get("io");
         if (io) {
-          // Best Practice: Promise.all query พร้อมกัน
-          emitScanAndCustomerDashboardUpdate(io, emitCNGroupId, result.station?.id || null);
+          emitScanAndCustomerDashboardUpdate(
+            io,
+            emitCNGroupId,
+            result.station?.id || null,
+          );
         }
       }
     } catch (err) {
@@ -137,7 +150,11 @@ export const scanController = {
         const io = req.app.get("io");
         if (io) {
           // Best Practice: Promise.all query พร้อมกัน
-          emitScanAndCustomerDashboardUpdate(io, emitCNGroupId, result.scanItem.stationId);
+          emitScanAndCustomerDashboardUpdate(
+            io,
+            emitCNGroupId,
+            result.scanItem.stationId,
+          );
         }
       }
     } catch (err) {
@@ -148,7 +165,7 @@ export const scanController = {
 
   /**
    * POST /api/v1/scan/summary
-   * ดึงสถิติสรุปสำหรับ Header Summary Bar (เบากว่า dashboard)
+   * ดึงสถิติสรุปสำหรับ Header Summary Bar
    */
   async getSummary(req, res, next) {
     try {
@@ -177,14 +194,17 @@ export const scanController = {
         if (Array.isArray(createdByUserIds)) {
           userIdsArray = createdByUserIds.map(Number).filter(Boolean);
         } else if (typeof createdByUserIds === "string") {
-          userIdsArray = createdByUserIds.split(",").map(Number).filter(Boolean);
+          userIdsArray = createdByUserIds
+            .split(",")
+            .map(Number)
+            .filter(Boolean);
         }
       }
 
       const summaryData = await getScanSummaryService(
         cnGroupId,
         companiesArray,
-        userIdsArray
+        userIdsArray,
       );
 
       res.status(200).json({
@@ -227,7 +247,10 @@ export const scanController = {
         if (Array.isArray(createdByUserIds)) {
           userIdsArray = createdByUserIds.map(Number).filter(Boolean);
         } else if (typeof createdByUserIds === "string") {
-          userIdsArray = createdByUserIds.split(",").map(Number).filter(Boolean);
+          userIdsArray = createdByUserIds
+            .split(",")
+            .map(Number)
+            .filter(Boolean);
         }
       }
 
@@ -235,7 +258,7 @@ export const scanController = {
         cnGroupId,
         stationId ? parseInt(stationId) : null,
         companiesArray,
-        userIdsArray
+        userIdsArray,
       );
 
       res.status(200).json({
@@ -263,7 +286,11 @@ export const scanController = {
         });
       }
 
-      const companies = await getCompaniesByCNGroupService(cnGroupId);
+      const allowed = await getCustomerAllowedCompanies(req);
+      const allCompanies = await getCompaniesByCNGroupService(cnGroupId);
+      const companies = allowed
+        ? allCompanies.filter((c) => allowed.includes(c))
+        : allCompanies;
 
       res.status(200).json({
         success: true,
@@ -295,12 +322,16 @@ export const scanController = {
       if (companies) {
         if (Array.isArray(companies)) {
           companiesArray = companies;
-        } else if (typeof companies === 'string') {
+        } else if (typeof companies === "string") {
           companiesArray = [companies];
         }
       }
 
-      const departments = await getDepartmentsByCNGroupService(cnGroupId, companiesArray);
+      const allowed = await getCustomerAllowedCompanies(req);
+      const departments = await getDepartmentsByCNGroupService(
+        cnGroupId,
+        enforceCompanies(companiesArray, allowed),
+      );
 
       res.status(200).json({
         success: true,
@@ -377,7 +408,7 @@ export const scanController = {
       if (
         !status ||
         !["all", "registered", "unregistered", "special_checkup"].includes(
-          status
+          status,
         )
       ) {
         return res.status(400).json({
@@ -408,7 +439,10 @@ export const scanController = {
           try {
             userIdsArray = JSON.parse(createdByUserIds);
           } catch (e) {
-            userIdsArray = createdByUserIds.split(",").map(Number).filter(Boolean);
+            userIdsArray = createdByUserIds
+              .split(",")
+              .map(Number)
+              .filter(Boolean);
           }
         } else if (Array.isArray(createdByUserIds)) {
           userIdsArray = createdByUserIds.map(Number).filter(Boolean);
@@ -440,7 +474,12 @@ export const scanController = {
   async getScanItemsByMembership(req, res, next) {
     try {
       const { membershipId } = req.params;
-      const { page = 1, limit = 20, isCancelled } = req.query;
+      const {
+        page = 1,
+        limit = 20,
+        isCancelled,
+        membershipType = "cn",
+      } = req.query;
 
       // แปลง query string เป็น boolean หรือ undefined
       let isCancelledValue = undefined;
@@ -456,6 +495,7 @@ export const scanController = {
         page: parseInt(page),
         limit: parseInt(limit),
         isCancelled: isCancelledValue,
+        membershipType,
       });
 
       res.status(200).json({
@@ -524,7 +564,10 @@ export const scanController = {
           try {
             userIdsArray = JSON.parse(createdByUserIds);
           } catch (e) {
-            userIdsArray = createdByUserIds.split(",").map(Number).filter(Boolean);
+            userIdsArray = createdByUserIds
+              .split(",")
+              .map(Number)
+              .filter(Boolean);
           }
         } else if (Array.isArray(createdByUserIds)) {
           userIdsArray = createdByUserIds.map(Number).filter(Boolean);
@@ -546,7 +589,7 @@ export const scanController = {
           companies: companiesArray,
           createdByUserIds: userIdsArray,
           examType: examType || null,
-        }
+        },
       );
 
       res.json(result);
@@ -604,6 +647,7 @@ export const scanController = {
         }
       }
 
+      const allowed = await getCustomerAllowedCompanies(req);
       const result = await getPatientsByStationForCustomerService(
         cnGroupId,
         parseInt(stationId),
@@ -616,13 +660,16 @@ export const scanController = {
           scanStatus,
           registrationStatus,
           stationRemarkFilter,
-          companies: companiesArray,
-        }
+          companies: enforceCompanies(companiesArray, allowed),
+        },
       );
 
       res.json(result);
     } catch (err) {
-      console.error("❌ Get Patients By Station For Customer Controller Error:", err);
+      console.error(
+        "❌ Get Patients By Station For Customer Controller Error:",
+        err,
+      );
       next(err);
     }
   },
@@ -633,31 +680,31 @@ export const scanController = {
    */
   async getUserScanSummaryToday(req, res, next) {
     try {
-      const userId = req.user?.id
-      const cnGroupId = req.query.cnGroupId
+      const userId = req.user?.id;
+      const cnGroupId = req.query.cnGroupId;
 
       if (!userId) {
         return res.status(401).json({
           success: false,
-          message: 'Unauthorized'
-        })
+          message: "Unauthorized",
+        });
       }
 
       if (!cnGroupId) {
         return res.status(400).json({
           success: false,
-          message: 'กรุณาระบุ cnGroupId'
-        })
+          message: "กรุณาระบุ cnGroupId",
+        });
       }
 
-      const summary = await getUserScanSummaryTodayService(userId, cnGroupId)
-      res.status(200).json(summary)
+      const summary = await getUserScanSummaryTodayService(userId, cnGroupId);
+      res.status(200).json(summary);
     } catch (err) {
-      console.error('Error in getUserScanSummaryToday:', err)
+      console.error("Error in getUserScanSummaryToday:", err);
       res.status(400).json({
         success: false,
-        message: err.message || 'เกิดข้อผิดพลาดในการดึงข้อมูล'
-      })
+        message: err.message || "เกิดข้อผิดพลาดในการดึงข้อมูล",
+      });
     }
   },
 
@@ -694,36 +741,43 @@ export const scanController = {
    */
   async bulkUpdateScanlog(req, res, next) {
     try {
-      const { patientHN, cnGroupId, stationIds } = req.body
-      const userId = req.user?.id
+      const { patientHN, cnGroupId, stationIds } = req.body;
+      const userId = req.user?.id;
 
       if (!userId) {
-        return res.status(401).json({ success: false, message: 'Unauthorized' })
+        return res
+          .status(401)
+          .json({ success: false, message: "Unauthorized" });
       }
 
       if (!patientHN || !cnGroupId || !Array.isArray(stationIds)) {
         return res.status(400).json({
           success: false,
-          message: 'กรุณาระบุข้อมูลให้ครบถ้วน'
-        })
+          message: "กรุณาระบุข้อมูลให้ครบถ้วน",
+        });
       }
 
       const result = await bulkUpdateScanlogService(
         patientHN,
         cnGroupId,
         stationIds,
-        userId
-      )
+        userId,
+      );
 
       if (result.success) {
-        createSystemLog(req, 'BULK_UPDATE_SCANLOG', { patientHN, cnGroupId, stationIds, message: result.message }).catch(() => {})
-        res.status(200).json(result)
+        createSystemLog(req, "BULK_UPDATE_SCANLOG", {
+          patientHN,
+          cnGroupId,
+          stationIds,
+          message: result.message,
+        }).catch(() => {});
+        res.status(200).json(result);
       } else {
-        res.status(400).json(result)
+        res.status(400).json(result);
       }
     } catch (error) {
-      console.error('Error in bulkUpdateScanlog controller:', error)
-      next(error)
+      console.error("Error in bulkUpdateScanlog controller:", error);
+      next(error);
     }
   },
 };
