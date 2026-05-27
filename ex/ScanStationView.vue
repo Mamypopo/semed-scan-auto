@@ -14,8 +14,9 @@
       </p>
     </div>
 
-    <!-- Header Summary Bar + Stats Cards -->
-    <div v-if="selectedCNGroupId" class="bg-white rounded-lg shadow-sm border border-ui-border-default p-3 mb-4">
+
+    <!-- Header Summary Bar + Stats Cards (ซ่อนตอน offline) -->
+    <div v-if="selectedCNGroupId && !isOffline" class="bg-white rounded-lg shadow-sm border border-ui-border-default p-3 mb-4">
       <!-- Loading Skeleton -->
       <template v-if="isLoadingSummary">
         <div class="space-y-3">
@@ -47,16 +48,16 @@
                 class="flex items-center gap-2 px-2.5 py-1.5 bg-brand-info-light rounded-lg border border-brand-info/20 flex-shrink-0">
                 <QrCode class="w-4 h-4 text-ui-text-brand-info" />
                 <span class="text-sm font-semibold text-ui-text-brand-info truncate">{{ selectedCNGroupName || '-'
-                  }}</span>
+                }}</span>
               </div>
             </div>
 
             <!-- Selected Tags (Moved here!) -->
             <div v-if="(selectedCompanies.length > 0 || selectedUserIds.length > 0)" class="flex flex-wrap gap-1.5">
               <span v-for="company in selectedCompanies" :key="'c-' + company"
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-brand-secondary-light text-ui-text-brand-secondary text-xs rounded-lg border border-brand-secondary/20 font-semibold"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-brand-secondary-light text-ui-text-brand-secondary text-xs rounded-lg border border-brand-secondary/20 font-semibold max-w-full"
                 v-tooltip.bottom="company">
-                <span class="truncate max-w-[150px]">{{ company }}</span>
+                <span class="break-words">{{ company }}</span>
                 <button @click="toggleCompany(company)"
                   class="hover:text-ui-text-brand-error focus:outline-none transition-colors flex-shrink-0">
                   <X class="w-3 h-3" />
@@ -65,7 +66,7 @@
               <span v-for="userId in selectedUserIds" :key="'u-' + userId"
                 class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-brand-accent-light text-ui-text-brand-accent text-xs rounded-lg border border-brand-accent/20 font-semibold">
                 <span class="truncate max-w-[150px]">{{registeringUsers.find(u => u.id === userId)?.name || userId
-                  }}</span>
+                }}</span>
                 <button @click="toggleUser(userId)"
                   class="hover:text-ui-text-brand-error focus:outline-none transition-colors flex-shrink-0">
                   <X class="w-3 h-3" />
@@ -77,12 +78,12 @@
           <!-- Right: Filters -->
           <div class="flex gap-2 flex-shrink-0 w-full lg:w-auto">
             <!-- Company Filter -->
-            <div class="relative flex-1 lg:flex-none lg:w-[280px]">
-              <Listbox v-model="selectedCompanies" multiple as="div" class="relative"
+            <div class="relative flex-1 min-w-0 lg:flex-none lg:w-auto lg:max-w-none">
+              <Listbox v-model="selectedCompanies" multiple as="div" class="relative w-full lg:w-max lg:max-w-full"
                 @update:model-value="handleCompanySelectionChange">
                 <ListboxButton @click="loadCompaniesIfNeeded"
-                  class="flex items-center gap-2 px-3 py-2 bg-white hover:bg-ui-bg-secondary border border-ui-border-default rounded-lg text-left cursor-pointer transition-colors w-full shadow-sm hover:shadow-md h-10">
-                  <span class="text-sm font-medium text-ui-text-primary truncate flex-1">
+                  class="flex items-center gap-2 px-3 py-2 bg-white hover:bg-ui-bg-secondary border border-ui-border-default rounded-lg text-left cursor-pointer transition-colors w-full shadow-sm hover:shadow-md min-h-10 h-auto">
+                  <span class="text-sm font-medium text-ui-text-primary flex-1 min-w-0 whitespace-normal break-words">
                     <template v-if="selectedCompanies.length > 0">
                       {{ selectedCompanies.length === 1 ? selectedCompanies[0] : `เลือก ${selectedCompanies.length}
                       บริษัท` }}
@@ -98,7 +99,7 @@
                   leave-active-class="transition ease-in duration-75" leave-from-class="transform opacity-100 scale-100"
                   leave-to-class="transform opacity-0 scale-95">
                   <ListboxOptions
-                    class="absolute z-50 mt-1 w-full bg-white border border-ui-border-default rounded-lg shadow-xl focus:outline-none max-h-80 overflow-hidden flex flex-col right-0">
+                    class="absolute z-50 mt-1 min-w-full w-max max-w-[calc(100vw-1.5rem)] bg-white border border-ui-border-default rounded-lg shadow-xl focus:outline-none max-h-80 overflow-hidden flex flex-col right-0">
                     <!-- Search Input -->
                     <div class="p-2 border-b border-ui-border-default">
                       <div class="relative">
@@ -106,7 +107,7 @@
                           class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-ui-text-tertiary" />
                         <input v-model.trim="companySearchQuery" type="text" placeholder="ค้นหาบริษัท..."
                           class="w-full pl-10 pr-4 py-2 text-xs border border-ui-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary-light focus:border-ui-border-focus bg-white text-ui-text-primary placeholder-ui-text-tertiary"
-                          @click.stop />
+                          @click.stop @keydown.space.stop />
                       </div>
                     </div>
                     <!-- Company List -->
@@ -128,7 +129,7 @@
                           'px-3 py-2 text-xs rounded-lg cursor-pointer flex items-center justify-between transition-colors',
                           active ? 'bg-brand-primary-light text-ui-text-brand-primary' : 'text-ui-text-primary',
                         ]" v-tooltip.right="company">
-                          <span class="truncate flex-1">{{ company }}</span>
+                          <span class="flex-1 min-w-0 whitespace-normal break-words pr-2">{{ company }}</span>
                           <CheckCircle v-if="selected"
                             class="w-3.5 h-3.5 text-ui-text-brand-primary flex-shrink-0 ml-2" />
                         </li>
@@ -170,7 +171,7 @@
                           class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-ui-text-tertiary" />
                         <input v-model.trim="userSearchQuery" type="text" placeholder="ค้นหาผู้ลงทะเบียน..."
                           class="w-full pl-10 pr-4 py-2 text-xs border border-ui-border-default rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary-light focus:border-ui-border-focus bg-white text-ui-text-primary placeholder-ui-text-tertiary"
-                          @click.stop />
+                          @click.stop @keydown.space.stop />
                       </div>
                     </div>
                     <!-- User List -->
@@ -212,7 +213,7 @@
             class="flex items-center justify-between px-3 py-2.5 bg-brand-secondary-light hover:bg-brand-secondary-light/80 border border-brand-secondary/20 rounded-lg transition-all cursor-pointer group shadow-sm hover:shadow-md">
             <span class="text-xs font-medium text-ui-text-brand-secondary">ทั้งหมด</span>
             <span class="text-lg font-bold text-ui-text-brand-secondary">{{ dashboardSummary.totalPatients || 0
-              }}</span>
+            }}</span>
           </button>
 
           <!-- ลงทะเบียน -->
@@ -222,7 +223,7 @@
             <div class="flex items-baseline gap-1">
               <span class="text-lg font-bold text-ui-text-brand-success">{{ dashboardSummary.registered || 0 }}</span>
               <span class="text-[10px] text-ui-text-brand-success/80">({{ dashboardSummary.registrationPercentage || 0
-                }}%)</span>
+              }}%)</span>
             </div>
           </button>
 
@@ -244,7 +245,7 @@
             class="flex items-center justify-between px-3 py-2.5 bg-brand-accent-light hover:bg-brand-accent-light/80 border border-brand-accent/20 rounded-lg transition-all cursor-pointer group shadow-sm hover:shadow-md">
             <span class="text-xs font-medium text-ui-text-brand-accent">ตรวจพิเศษ</span>
             <span class="text-lg font-bold text-ui-text-brand-accent">{{ dashboardSummary.specialCheckupCount || 0
-              }}</span>
+            }}</span>
           </button>
 
           <!-- สแกน -->
@@ -263,10 +264,23 @@
       </div>
     </div>
 
-    <!-- Dashboard -->
-    <ScanDashboard ref="scanDashboardRef" v-if="selectedCNGroupId" :cnGroupId="selectedCNGroupId"
+    <!-- Dashboard (ซ่อนตอน offline) -->
+    <ScanDashboard ref="scanDashboardRef" v-if="selectedCNGroupId && !isOffline" :cnGroupId="selectedCNGroupId"
       :stationId="selectedStations.length === 1 ? selectedStations[0].id : null" :companies="selectedCompanies"
       :created-by-user-ids="selectedUserIds" @open-station-modal="openStationModal" />
+
+    <!-- Offline: ไม่มีข้อมูลสำรอง warning -->
+    <div v-if="selectedCNGroupId && isOffline && !isOfflineReady"
+      class="bg-brand-warning-light border border-brand-warning/20 rounded-lg p-4 text-sm text-ui-text-brand-warning font-medium">
+      ไม่มีข้อมูลสำรอง — ไม่สามารถสแกนออฟไลน์ได้ กรุณากดปุ่ม "สำรองข้อมูล Offline" ก่อน
+    </div>
+
+    <!-- Offline: รายการสแกนออฟไลน์ -->
+    <OfflineScanList
+      ref="offlineScanListRef"
+      v-if="selectedCNGroupId && isOffline && isOfflineReady"
+      :cn-group-id="selectedCNGroupId"
+    />
 
     <!-- Scan Input & Result Section (2 Columns) -->
     <div v-if="selectedCNGroupId" class="flex flex-col md:flex-row gap-4">
@@ -284,8 +298,47 @@
                 <h2 class="text-lg font-semibold text-ui-text-brand-primary">เลือกจุดตรวจ & สแกน</h2>
               </div>
 
-              <!-- Auto Scan Toggle -->
-              <div class="flex items-center gap-2.5">
+              <!-- Offline chip + Auto Scan Toggle -->
+              <div class="flex items-center gap-2">
+                <!-- Offline: warning badge -->
+                <span v-if="isOffline && isOfflineReady" class="flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-warning-light text-brand-warning-dark text-[10px] font-semibold whitespace-nowrap">
+                  <WifiOff class="w-3 h-3 flex-shrink-0" />
+                  ออฟไลน์ · {{ offlineCacheMeta?.memberCount?.toLocaleString() }} คน
+                </span>
+                <span v-else-if="isOffline && !isOfflineReady" class="flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-warning-light text-brand-warning-dark text-[10px] font-semibold whitespace-nowrap">
+                  <WifiOff class="w-3 h-3 flex-shrink-0" />
+                  ออฟไลน์ · ไม่มีข้อมูลสำรอง
+                </span>
+                <!-- Online + pending sync -->
+                <button v-else-if="isOnline && offlinePendingCount > 0" @click="handleSync" :disabled="isSyncing"
+                  class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold whitespace-nowrap bg-brand-primary-light text-brand-primary border border-brand-primary/20 hover:bg-brand-primary/10 disabled:opacity-60 disabled:cursor-not-allowed transition-colors">
+                  <Loader2 v-if="isSyncing" class="w-3 h-3 animate-spin" />
+                  <RefreshCw v-else class="w-3 h-3" />
+                  {{ isSyncing ? 'กำลัง sync...' : `${offlinePendingCount} รอ sync` }}
+                </button>
+                <!-- Online + ready chip -->
+                <button v-else-if="isOnline && isOfflineReady" @click="handlePrepareOffline" :disabled="offlinePrepareModal.show"
+                  class="flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-semibold whitespace-nowrap transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  :class="offlinePrepareModal.show ? 'bg-ui-bg-secondary border-ui-border-default text-ui-text-tertiary'
+                    : isCacheStale ? 'bg-brand-warning-light border-brand-warning-soft/60 text-brand-warning-dark hover:bg-brand-warning-soft/20'
+                    : 'bg-brand-success-light border-brand-success-soft/60 text-brand-success-dark hover:bg-brand-success-soft/20'">
+                  <Loader2 v-if="offlinePrepareModal.show" class="w-3 h-3 animate-spin" />
+                  <AlertTriangle v-else-if="isCacheStale" class="w-3 h-3" />
+                  <CheckCircle2 v-else class="w-3 h-3" />
+                  <span v-if="offlinePrepareModal.show">กำลังโหลด...</span>
+                  <span v-else-if="isCacheStale">เก่า {{ cacheAgeText }} · อัพเดท</span>
+                  <span v-else>สำรองข้อมูลแล้ว · {{ offlineCacheMeta?.memberCount?.toLocaleString() }} คน<template v-if="offlineCacheSizeMb"> · {{ offlineCacheSizeMb }}</template> · {{ offlineCachedAtFormatted }}</span>
+                </button>
+                <!-- Online + no cache -->
+                <button v-else-if="isOnline" @click="handlePrepareOffline" :disabled="offlinePrepareModal.show"
+                  class="flex items-center gap-1 px-2 py-1 rounded-lg border text-[10px] font-semibold whitespace-nowrap transition-all bg-ui-bg-primary border-ui-border-default text-ui-text-tertiary hover:border-brand-primary hover:text-brand-primary disabled:opacity-50 disabled:cursor-not-allowed">
+                  <Loader2 v-if="offlinePrepareModal.show" class="w-3 h-3 animate-spin" />
+                  <WifiOff v-else class="w-3 h-3" />
+                  {{ offlinePrepareModal.show ? 'กำลังโหลด...' : 'สำรอง Offline' }}
+                </button>
+
+                <div class="w-px h-4 bg-ui-border-default"></div>
+
                 <span
                   class="text-xs font-bold transition-colors duration-300 whitespace-nowrap w-12 text-right select-none tracking-wide"
                   :class="isAutoMode ? 'text-brand-success' : 'text-brand-warning'">
@@ -495,7 +548,7 @@
                     <Hash class="w-3.5 h-3.5 text-brand-primary" />
                     <span class="text-xs text-ui-text-secondary">CN:</span>
                     <span class="text-sm font-semibold text-brand-primary tracking-wide">{{ lastScanResult.membership.cn
-                      }}</span>
+                    }}</span>
                   </div>
 
                   <div v-if="lastScanResult.patient.citizenId"
@@ -504,7 +557,7 @@
                     <span class="text-xs text-ui-text-secondary">เลขบัตรฯ:</span>
                     <span class="text-sm font-medium text-ui-text-primary tracking-wide">{{
                       lastScanResult.patient.citizenId
-                      }}</span>
+                    }}</span>
                   </div>
 
                 </div>
@@ -619,6 +672,18 @@
       :stationName="selectedStationName" :examType="selectedStationExamType" :companies="selectedCompanies"
       :created-by-user-ids="selectedUserIds" @close="showStationModal = false" @remark-saved="handleRemarkSaved"
       @remark-deleted="handleRemarkDeleted" />
+
+    <!-- Offline Prepare Modal -->
+    <OfflinePrepareModal
+      :show="offlinePrepareModal.show"
+      :progress="offlinePrepareModal.progress"
+      :status="offlinePrepareModal.status"
+      :error-message="offlinePrepareModal.errorMessage"
+      :cache-size="offlinePrepareModal.cacheSize"
+      :cached-at-formatted="offlinePrepareModal.cachedAtFormatted"
+      :member-count="offlinePrepareModal.memberCount"
+      @close="offlinePrepareModal.show = false"
+    />
   </div>
 </template>
 
@@ -638,16 +703,28 @@ import {
   ScanBarcode,
   Hash,
   IdCard,
-  Code as CodeIcon
+  Code as CodeIcon,
+  WifiOff,
+  Loader2,
+  AlertTriangle,
+  CheckCircle2,
+  RefreshCw
 } from 'lucide-vue-next'
 import { Listbox, ListboxButton, ListboxOptions, ListboxOption } from '@headlessui/vue'
 import ScanDashboard from './components/ScanDashboard.vue'
 import ScanPatientListModal from './components/ScanPatientListModal.vue'
 import StationPatientListModal from './components/StationPatientListModal.vue'
+
+import OfflinePrepareModal from '@/views/registration/components/OfflinePrepareModal.vue'
+import OfflineScanList from './components/OfflineScanList.vue'
 import scanService from '@/services/scan.js'
 import stationService from '@/services/station.js'
 import { getScanSummary } from '@/services/dashboard.service.js'
 import { useCNGroupStore } from '@/stores/cnGroup'
+import { useAuthStore } from '@/stores/auth'
+import { getCacheMeta, getStationsOffline, getMemberByCn, buildOfflineCache } from '@/services/offline/cache.service.js'
+import { enqueueScan, getPendingCount, flushQueue, retryErrorQueue } from '@/services/offline/sync.service.js'
+import db from '@/services/offline/db.js'
 
 export default {
   name: 'ScanStationView',
@@ -655,6 +732,9 @@ export default {
     ScanDashboard,
     ScanPatientListModal,
     StationPatientListModal,
+
+    OfflinePrepareModal,
+    OfflineScanList,
     CheckCircle,
     QrCode,
     ChevronDown,
@@ -672,11 +752,17 @@ export default {
     ListboxOptions,
     ListboxOption,
     Hash,
-    IdCard
+    IdCard,
+    WifiOff,
+    Loader2,
+    AlertTriangle,
+    CheckCircle2,
+    RefreshCw,
   },
   setup() {
     const cnGroupStore = useCNGroupStore()
-    return { cnGroupStore }
+    const authStore = useAuthStore()
+    return { cnGroupStore, authStore }
   },
   data() {
     return {
@@ -703,7 +789,13 @@ export default {
       selectedUserIds: [],
       registeringUsers: [],
       isLoadingUsers: false,
-      userSearchQuery: ''
+      userSearchQuery: '',
+      // --- Offline state ---
+      isOnline: navigator.onLine,
+      isSyncing: false,
+      offlinePendingCount: 0,
+      offlineCacheMeta: null,
+      offlinePrepareModal: { show: false, progress: 0, status: 'loading', errorMessage: null, cacheSize: null, cachedAtFormatted: null, memberCount: 0 },
     }
   },
   computed: {
@@ -743,7 +835,27 @@ export default {
         user.name?.toLowerCase().includes(query)
       )
     },
-
+    isOffline() { return !this.isOnline },
+    isOfflineReady() { return !!this.offlineCacheMeta?.cachedAt },
+    offlineCachedAtFormatted() {
+      if (!this.offlineCacheMeta?.cachedAt) return null
+      const d = new Date(this.offlineCacheMeta.cachedAt)
+      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+    },
+    offlineCacheSizeMb() {
+      const bytes = this.offlineCacheMeta?.sizeBytes
+      if (!bytes) return null
+      return bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(0)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`
+    },
+    isCacheStale() {
+      if (!this.offlineCacheMeta?.cachedAt) return false
+      return Date.now() - new Date(this.offlineCacheMeta.cachedAt).getTime() > 8 * 60 * 60 * 1000
+    },
+    cacheAgeText() {
+      if (!this.offlineCacheMeta?.cachedAt) return null
+      const hours = Math.floor((Date.now() - new Date(this.offlineCacheMeta.cachedAt).getTime()) / 3600000)
+      return hours < 1 ? null : `${hours} ชม.`
+    },
   },
   watch: {
     selectedCNGroupId: {
@@ -757,6 +869,7 @@ export default {
           // Load companies เมื่อเปลี่ยน CNGroup
           this.loadCompanies()
           this.loadRegisteringUsers()
+          this.refreshOfflineMeta()
         } else {
           this.stations = []
           this.selectedStations = []
@@ -767,6 +880,8 @@ export default {
           this.selectedUserIds = []
           this.registeringUsers = []
           this.userSearchQuery = ''
+          this.offlineCacheMeta = null
+          this.offlinePendingCount = 0
           // ลบการเลือกจาก localStorage เมื่อเปลี่ยน CNGroup
           localStorage.removeItem('selectedStationIds')
         }
@@ -810,10 +925,21 @@ export default {
   },
   mounted() {
     this.$nextTick(() => {
-      if (this.$refs.barcodeInputRef) {
-        this.$refs.barcodeInputRef.focus()
-      }
+      if (this.$refs.barcodeInputRef) this.$refs.barcodeInputRef.focus()
     })
+    this._onOnline = async () => {
+      this.isOnline = true
+      await this.refreshOfflineMeta()
+      if (this.offlinePendingCount > 0) this.handleSync()
+    }
+    this._onOffline = () => { this.isOnline = false }
+    window.addEventListener('online', this._onOnline)
+    window.addEventListener('offline', this._onOffline)
+    this.refreshOfflineMeta()
+  },
+  beforeUnmount() {
+    window.removeEventListener('online', this._onOnline)
+    window.removeEventListener('offline', this._onOffline)
   },
   methods: {
     async loadSummary() {
@@ -917,12 +1043,18 @@ export default {
 
     async loadStations() {
       if (!this.selectedCNGroupId) return
-
+      if (this.isOffline) {
+        this.stations = await getStationsOffline() || []
+        return
+      }
       try {
         const response = await stationService.getActiveScannedByCnGroup(this.selectedCNGroupId)
         this.stations = response || []
       } catch (error) {
         console.error('Error loading stations:', error)
+        // fallback to cache on network error
+        const cached = await getStationsOffline()
+        if (cached?.length) this.stations = cached
       }
     },
     toggleStationSelection(station) {
@@ -1017,14 +1149,26 @@ export default {
         }
       }
     },
+    parseBarcodeInput(barcode) {
+      let cn = barcode
+      let stationId = null
+      if (barcode.includes('.')) {
+        const parts = barcode.split('.')
+        cn = parts[0]
+        stationId = parseInt(parts[1])
+        if (isNaN(stationId)) throw new Error('รูปแบบบาร์โค้ดไม่ถูกต้อง: Station ID ต้องเป็นตัวเลข')
+      } else if (!this.isAutoMode) {
+        if (this.selectedStations.length === 0) throw new Error('กรุณาเลือกจุดตรวจอย่างน้อย 1 จุด')
+        throw new Error('กรุณาระบุ Station ID ในบาร์โค้ด (CN.STATION_ID) หรือเลือกจุดตรวจ')
+      } else {
+        throw new Error('กรุณาระบุ Station ID ในบาร์โค้ด (CN.STATION_ID)')
+      }
+      return { cn, stationId }
+    },
     async handleScan() {
       if (!this.barcodeInput.trim()) return
       if (!this.selectedCNGroupId) {
-        Swal.fire({
-          icon: 'warning',
-          title: 'กรุณาเลือก CNGroup',
-          text: 'กรุณาเลือก CNGroup ก่อนสแกน'
-        })
+        Swal.fire({ icon: 'warning', title: 'กรุณาเลือก CNGroup', text: 'กรุณาเลือก CNGroup ก่อนสแกน' })
         return
       }
 
@@ -1032,27 +1176,8 @@ export default {
       this.lastScanResult = null
 
       try {
-        // Parse barcode (CN.STATION_ID หรือ CN)
         const barcode = this.barcodeInput.trim()
-        let cn = barcode
-        let stationId = null
-
-        if (barcode.includes('.')) {
-          const parts = barcode.split('.')
-          cn = parts[0]
-          stationId = parseInt(parts[1])
-          if (isNaN(stationId)) {
-            throw new Error('รูปแบบบาร์โค้ดไม่ถูกต้อง: Station ID ต้องเป็นตัวเลข')
-          }
-        } else if (!this.isAutoMode) {
-          if (this.selectedStations.length === 0) {
-            throw new Error('กรุณาเลือกจุดตรวจอย่างน้อย 1 จุด')
-          }
-          // ถ้าไม่มี Station ID ในบาร์โค้ด และไม่ได้เปิด Auto Mode ต้องเลือกจุดตรวจ
-          throw new Error('กรุณาระบุ Station ID ในบาร์โค้ด (CN.STATION_ID) หรือเลือกจุดตรวจ')
-        } else if (this.isAutoMode && !stationId) {
-          throw new Error('กรุณาระบุ Station ID ในบาร์โค้ด (CN.STATION_ID)')
-        }
+        const { cn, stationId } = this.parseBarcodeInput(barcode)
 
         // ตรวจสอบว่า Station ID จากบาร์โค้ดอยู่ในรายการที่เลือกหรือไม่ (ถ้าไม่ใช่ Auto Mode)
         if (!this.isAutoMode && stationId) {
@@ -1066,6 +1191,13 @@ export default {
           }
         }
 
+        // ─── Offline path ──────────────────────────────────────────
+        if (this.isOffline) {
+          await this.handleScanOffline(cn, stationId)
+          return
+        }
+        // ─── Online path ───────────────────────────────────────────
+
         let result = await scanService.scanCheckpoint(cn, stationId, this.selectedCNGroupId)
 
         // มีหมายเหตุจุดตรวจ → ถามก่อนบันทึก scan
@@ -1073,7 +1205,7 @@ export default {
           const r = result.stationRemark
           const remarkText = [r.reason?.title, r.remark].filter(Boolean).join(': ')
           this.playErrorSound()
-       
+
           const confirmed = await Swal.fire({
             icon: 'warning',
             title: 'มีหมายเหตุจุดตรวจ',
@@ -1082,12 +1214,12 @@ export default {
             confirmButtonText: 'ยืนยันและสแกน',
             cancelButtonText: 'ยกเลิก',
             reverseButtons: true,
-            focusConfirm: false, 
+            focusConfirm: false,
             focusCancel: false,
             didOpen: () => {
-                if (document.activeElement) {
-                    document.activeElement.blur()
-                }
+              if (document.activeElement) {
+                document.activeElement.blur()
+              }
             }
           })
           if (!confirmed.isConfirmed) {
@@ -1217,7 +1349,201 @@ export default {
       if (this.$refs.scanDashboardRef) {
         this.$refs.scanDashboardRef.loadDashboard()
       }
-    }
+    },
+    async refreshOfflineMeta() {
+      if (!this.selectedCNGroupId) return
+      this.offlineCacheMeta = await getCacheMeta(this.selectedCNGroupId)
+      this.offlinePendingCount = await getPendingCount(this.authStore?.user?.id, 'SCAN')
+    },
+    async handlePrepareOffline() {
+      this.offlinePrepareModal = { show: true, progress: 0, status: 'loading', errorMessage: null, cacheSize: null, cachedAtFormatted: null, memberCount: 0 }
+      try {
+        const result = await buildOfflineCache(this.selectedCNGroupId, (p) => { this.offlinePrepareModal.progress = p })
+        this.offlinePrepareModal.status = 'done'
+        this.offlinePrepareModal.memberCount = result.memberCount
+        this.offlinePrepareModal.cachedAtFormatted = new Date(result.cachedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
+        this.offlinePrepareModal.cacheSize = result.sizeBytes < 1048576
+          ? `${(result.sizeBytes / 1024).toFixed(0)} KB`
+          : `${(result.sizeBytes / 1048576).toFixed(1)} MB`
+        await this.refreshOfflineMeta()
+        await this.loadStations()
+      } catch (e) {
+        this.offlinePrepareModal.status = 'error'
+        this.offlinePrepareModal.errorMessage = e.message || 'เกิดข้อผิดพลาด'
+      }
+    },
+    async handleScanOffline(cn, stationId) {
+      if (!this.isOfflineReady) {
+        this.playErrorSound()
+        Swal.fire({ icon: 'warning', title: 'ไม่มีข้อมูลสำรอง', text: 'กรุณากดสำรองข้อมูล Offline ก่อนใช้งานในโหมดออฟไลน์' })
+        this.barcodeInput = ''
+        setTimeout(() => { if (this.$refs.barcodeInputRef) this.$refs.barcodeInputRef.focus() }, 300)
+        return
+      }
+
+      // 1. ค้นหา member จาก CN
+      const member = await getMemberByCn(this.selectedCNGroupId, cn)
+      if (!member) {
+        this.playErrorSound()
+        Swal.fire({ icon: 'warning', title: 'ไม่พบข้อมูลผู้ป่วย', text: `ไม่พบ CN: ${cn} ในข้อมูลสำรอง` })
+        this.barcodeInput = ''
+        setTimeout(() => { if (this.$refs.barcodeInputRef) this.$refs.barcodeInputRef.focus() }, 300)
+        return
+      }
+
+      // 2. ดึง station info (user เลือกมาแล้ว ไม่ต้องเช็ค isActive ซ้ำ)
+      const station = this.stations.find((s) => s.id === stationId)
+      if (!station) {
+        this.playErrorSound()
+        Swal.fire({ icon: 'warning', title: 'ไม่พบจุดตรวจ', text: `ไม่พบจุดตรวจ ID: ${stationId} ในข้อมูลสำรอง` })
+        this.barcodeInput = ''
+        setTimeout(() => { if (this.$refs.barcodeInputRef) this.$refs.barcodeInputRef.focus() }, 300)
+        return
+      }
+
+      // 3. เช็คว่ามี registration
+      const hasOnlineReg = !!member.registrationId
+      const hasOfflineReg = (await db.offlineQueue
+        .where('membershipId').equals(member.membershipId)
+        .and((q) => q.type === 'REGISTRATION' && q.status !== 'error')
+        .count()) > 0
+      if (!hasOnlineReg && !hasOfflineReg) {
+        this.playErrorSound()
+        Swal.fire({ icon: 'warning', title: 'ยังไม่ได้ลงทะเบียน', text: `CN: ${cn} ยังไม่ได้ลงทะเบียน กรุณาลงทะเบียนก่อนเข้ารับการตรวจ` })
+        this.barcodeInput = ''
+        setTimeout(() => { if (this.$refs.barcodeInputRef) this.$refs.barcodeInputRef.focus() }, 300)
+        return
+      }
+
+      // 4. เช็ค station อยู่ใน exam items
+      const allowedStationIds = new Set(
+        (member.examItems || []).flatMap((e) => e.medicalItem?.stationToMedicalItems || []).map((s) => s.stationId)
+      )
+      if (!allowedStationIds.has(stationId)) {
+        this.playErrorSound()
+        Swal.fire({ icon: 'warning', title: 'ไม่อยู่ในรายการตรวจ', text: `จุดตรวจ "${station.name}" ไม่อยู่ในรายการตรวจของ CN: ${cn}` })
+        this.barcodeInput = ''
+        setTimeout(() => { if (this.$refs.barcodeInputRef) this.$refs.barcodeInputRef.focus() }, 300)
+        return
+      }
+
+      // 5. เช็ค duplicate ใน offline queue
+      const isDuplicate = (await db.offlineQueue
+        .where('cnGroupId').equals(this.selectedCNGroupId)
+        .and((q) => q.type === 'SCAN' && q.cn === cn && q.stationId === stationId && q.status !== 'error')
+        .count()) > 0
+
+      // บันทึก offline queue
+      const clientId = await enqueueScan({
+        cnGroupId: this.selectedCNGroupId,
+        membershipId: member.membershipId,
+        cn: member.cn || cn,
+        stationId,
+        stationName: station.name,
+        firstName: member.patient?.first_name || null,
+        lastName: member.patient?.last_name || null,
+        userId: this.authStore?.user?.id || null,
+      })
+
+      this.offlinePendingCount++
+
+      this.lastScanResult = {
+        success: true,
+        message: isDuplicate ? `สแกนซ้ำ (ออฟไลน์) — จะ sync เมื่อกลับออนไลน์` : `บันทึกออฟไลน์แล้ว — จะ sync เมื่อกลับออนไลน์`,
+        patient: member.patient,
+        membership: {
+          cn: member.cn,
+          employeeCode: member.employeeCode,
+          department: member.department,
+          position: member.position,
+          companyName: member.companyName,
+        },
+        station,
+        scanItemId: null,
+        isCancelled: false,
+        isNewScan: !isDuplicate,
+        _offline: true,
+        _clientId: clientId,
+      }
+
+      if (isDuplicate) {
+        this.playDuplicateScanSound()
+        Swal.fire({ icon: 'warning', toast: true, position: 'bottom-right', title: 'สแกนซ้ำ (ออฟไลน์)', text: `CN ${member.cn} · ${station.name}`, showConfirmButton: false, timer: 1500, width: '450px' })
+      } else {
+        this.playSuccessSound()
+        Swal.fire({ icon: 'success', toast: true, position: 'bottom-right', title: 'บันทึกออฟไลน์แล้ว', text: `CN ${member.cn} · ${station.name}`, showConfirmButton: false, timer: 1500, width: '450px' })
+      }
+
+      this.barcodeInput = ''
+      this.$refs.offlineScanListRef?.load()
+      setTimeout(() => { if (this.$refs.barcodeInputRef) this.$refs.barcodeInputRef.focus() }, 50)
+    },
+    async handleSync() {
+      if (this.isSyncing || !this.isOnline) return
+      this.isSyncing = true
+      const userId = this.authStore?.user?.id
+      try {
+        const results = await flushQueue((done, total) => { this.offlinePendingCount = total - done }, userId, 'SCAN')
+        await this.refreshOfflineMeta()
+        this.$refs.offlineScanListRef?.load()
+        this.$refs.scanDashboardRef?.loadDashboard()
+
+        if (results.success > 0 || results.failed > 0) {
+          const mkRow = (i) => {
+            const t = i.createdAt ? new Date(i.createdAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''
+            const name = [i.firstName, i.lastName].filter(Boolean).join(' ')
+            return `<div class="flex items-start gap-2 py-1 border-b border-gray-100 last:border-0">
+              <span class="font-semibold text-gray-700 whitespace-nowrap">CN ${i.cn || '-'}</span>
+              <div class="flex-1 min-w-0">
+                <div class="text-gray-700 truncate">${name || '-'}</div>
+                ${i.stationName ? `<div class="text-gray-400 text-[10px]">${i.stationName}</div>` : ''}
+              </div>
+              ${t ? `<span class="text-gray-400 whitespace-nowrap text-[10px]">${t} น.</span>` : ''}
+            </div>`
+          }
+
+          const successSection = results.success > 0 ? `
+            <div class="mb-3">
+              <div class="flex items-center gap-1.5 mb-1.5">
+                <span class="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+                <span class="text-xs font-semibold text-green-700">สำเร็จ ${results.success} รายการ</span>
+              </div>
+              <div class="max-h-48 overflow-y-auto bg-green-50 border border-green-100 rounded-lg px-3 py-1 text-xs text-gray-600">
+                ${results.items.map(mkRow).join('')}
+              </div>
+            </div>` : ''
+
+          const errorSection = results.failed > 0 ? `
+            <div>
+              <div class="flex items-center gap-1.5 mb-1.5">
+                <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+                <span class="text-xs font-semibold text-red-600">ล้มเหลว ${results.failed} รายการ</span>
+              </div>
+              <div class="max-h-48 overflow-y-auto bg-red-50 border border-red-100 rounded-lg px-3 py-1 text-xs text-gray-600">
+                ${results.errors.map((e) => mkRow({ ...e, createdAt: null }) + `<div class="text-red-500 text-[10px] pb-1">${e.error}</div>`).join('')}
+              </div>
+            </div>` : ''
+
+          const hasErrors = results.failed > 0
+          const { isConfirmed } = await Swal.fire({
+            icon: hasErrors ? 'warning' : 'success',
+            title: 'Sync เสร็จสิ้น',
+            html: `<div class="text-left">${successSection}${errorSection}</div>`,
+            showCancelButton: hasErrors,
+            confirmButtonText: hasErrors ? 'ลองใหม่' : 'ตกลง',
+            cancelButtonText: 'ปิด',
+            confirmButtonColor: '#696CFF',
+            width: 640,
+          })
+          if (hasErrors && isConfirmed) {
+            await retryErrorQueue(userId)
+            await this.handleSync()
+          }
+        }
+      } finally {
+        this.isSyncing = false
+      }
+    },
   }
 }
 </script>

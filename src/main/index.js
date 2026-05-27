@@ -170,26 +170,40 @@ async function handleScan(barcode) {
     if (!isNaN(embeddedStationId)) {
       cn = parts.slice(0, -1).join('.')
       if (inputMode === 'auto') {
-        // ถ้าเลือก station ไว้ ต้องตรงกับ embedded stationId ถึงจะยิงได้
-        const selectedIds = stationIds
-        if (selectedIds.length > 0 && !selectedIds.includes(embeddedStationId)) {
-          console.warn(`⛔ stationId mismatch: barcode=${embeddedStationId} selected=${JSON.stringify(selectedIds)}`)
+        // Auto: ใช้ stationId จาก barcode ตรงๆ ไม่ validate
+        stationIds = [embeddedStationId]
+        console.log(`🔍 [Auto] cn="${cn}" stationId=${embeddedStationId}`)
+      } else {
+        // Manual: barcode ต้องมี stationId และต้องตรงกับที่เลือกไว้
+        if (!stationIds.includes(embeddedStationId)) {
+          const errMsg = `จุดตรวจไม่ตรงกัน: บาร์โค้ดนี้เป็นของจุดตรวจ #${embeddedStationId} แต่ไม่อยู่ในรายการที่เลือก`
+          console.warn(`⛔ ${errMsg}`)
+          showNotification({ type: 'error', title: '⛔ จุดตรวจไม่ตรงกัน', body: errMsg })
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('scan:error', {
               success: false,
-              error: `บาร์โค้ดนี้เป็นของจุดตรวจ #${embeddedStationId} ไม่ตรงกับที่เลือก`,
+              error: errMsg,
               timestamp: new Date().toISOString()
             })
           }
           return
         }
         stationIds = [embeddedStationId]
-        console.log(`🔍 [Auto] cn="${cn}" stationId=${embeddedStationId}`)
-      } else {
-        // Manual: ใช้ stationIds จาก UI, ส่งแค่ CN ที่ตัด suffix ออกแล้ว
-        console.log(`🔍 [Manual] cn="${cn}" stations=${JSON.stringify(stationIds)}`)
+        console.log(`🔍 [Manual] cn="${cn}" stationId=${embeddedStationId}`)
       }
     }
+  } else {
+    // ไม่มี stationId ใน barcode → error ทั้ง auto และ manual
+    const errMsg = 'กรุณาระบุ Station ID ในบาร์โค้ด (CN.STATION_ID)'
+    showNotification({ type: 'error', title: '⛔ รูปแบบไม่ถูกต้อง', body: errMsg })
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('scan:error', {
+        success: false,
+        error: errMsg,
+        timestamp: new Date().toISOString()
+      })
+    }
+    return
   }
 
   console.log(`🔎 mode="${inputMode}" stationIds=${JSON.stringify(stationIds)} cn="${cn}"`)
