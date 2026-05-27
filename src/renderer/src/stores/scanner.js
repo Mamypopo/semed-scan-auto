@@ -50,9 +50,13 @@ export const useScannerStore = defineStore('scanner', () => {
         if (lastScan.value?.scanId === scan.scanId) {
           lastScan.value = { ...lastScan.value, cancelled: true }
         }
-        Toast.fire({ icon: 'success', title: result.data?.message || 'ยกเลิกการสแกนสำเร็จ' })
+        const msg = result.data?.message || 'ยกเลิกการสแกนสำเร็จ'
+        Toast.fire({ icon: 'success', title: msg })
+        window.api.showNotification({ type: 'warning', title: '🚫 ยกเลิกสแกน', body: `${scan.patientName || ''}\n${msg}` })
       } else {
-        Toast.fire({ icon: 'error', title: result.data?.message || result.message || 'ยกเลิกไม่สำเร็จ' })
+        const msg = result.data?.message || result.message || 'ยกเลิกไม่สำเร็จ'
+        Toast.fire({ icon: 'error', title: msg })
+        window.api.showNotification({ type: 'error', title: '❌ ยกเลิกไม่สำเร็จ', body: msg })
       }
     } catch (e) {
       Toast.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด' })

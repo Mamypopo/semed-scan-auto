@@ -73,6 +73,7 @@ contextBridge.exposeInMainWorld('api', {
    */
   testScan: (barcode) => ipcRenderer.invoke('scan:test', barcode),
   cancelScan: (scanId) => ipcRenderer.invoke('scan:cancel', scanId),
+  showNotification: (opts) => ipcRenderer.invoke('notify:show', opts),
 
   onAuthExpired: (callback) => {
     ipcRenderer.once('auth:expired', () => callback())

@@ -1,7 +1,7 @@
-const { app, BrowserWindow, ipcMain, Notification, Menu } = require('electron')
+const { app, BrowserWindow, ipcMain, Menu } = require('electron')
 const { autoUpdater } = require('electron-updater')
 const path = require('path')
-const notifier = require('node-notifier')
+const { showNotification } = require('./notifier')
 
 const { saveConfig, clearConfig, getStationIds, getScanInputMode } = require('./store')
 const { playSound } = require('./sound')
@@ -76,23 +76,7 @@ function notifySuccess(data) {
     stationName ? `จุดตรวจ: ${stationName}` : null
   ].filter(Boolean).join('\n')
 
-  if (Notification.isSupported()) {
-    new Notification({
-      title,
-      body,
-      icon: path.join(__dirname, '../../assets/icon.png'),
-      silent: !isSoundEnabled(),
-      timeoutType: 'default'
-    }).show()
-  } else {
-    notifier.notify({
-      title,
-      message: body,
-      icon: path.join(__dirname, '../../assets/icon.png'),
-      sound: isSoundEnabled(),
-      wait: false
-    })
-  }
+  showNotification({ type: isDuplicate ? 'warning' : 'success', title, body })
   
   sendLog('success', `สแกนสำเร็จ: ${patientName}`, data?.station?.name ? `Station: ${data.station.name}` : null)
 
@@ -116,7 +100,7 @@ function notifySuccess(data) {
  * แจ้งเตือน Error
  */
 function notifyError(error) {
-  let message = error.message
+  let message = error.response?.data?.message || error.response?.data?.error || error.message
   let title = '❌ เกิดข้อผิดพลาด'
 
   if (error.response) {
@@ -133,7 +117,7 @@ function notifyError(error) {
       message = 'คุณไม่มีสิทธิ์ SCAN_CREATE'
     } else if (status === 404) {
       title = '❌ ไม่พบข้อมูล'
-      message = 'ไม่พบผู้ป่วยจากบาร์โค้ดนี้'
+      message = message || 'ไม่พบผู้ป่วยจากบาร์โค้ดนี้'
     }
   }
   
@@ -145,23 +129,7 @@ function notifyError(error) {
   // เล่นเสียง error
   if (isSoundEnabled()) playSound('error')
 
-  // Electron Native Notification
-  if (Notification.isSupported()) {
-    new Notification({
-      title,
-      body: message,
-      icon: path.join(__dirname, '../../assets/icon.png'),
-      silent: true
-    }).show()
-  } else {
-    notifier.notify({
-      title,
-      message,
-      icon: path.join(__dirname, '../../assets/icon.png'),
-      sound: false,
-      wait: false
-    })
-  }
+  showNotification({ type: 'error', title, body: message })
   
   // ส่งไปยัง Renderer
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -227,13 +195,7 @@ async function handleScan(barcode) {
   console.log(`🔎 mode="${inputMode}" stationIds=${JSON.stringify(stationIds)} cn="${cn}"`)
 
   if (!stationIds.length) {
-    if (Notification.isSupported()) {
-      new Notification({
-        title: '⚠️ ไม่มีจุดตรวจ',
-        body: 'กรุณาเลือกจุดตรวจก่อนสแกน',
-        silent: true
-      }).show()
-    }
+    showNotification({ type: 'error', title: '⚠️ ไม่มีจุดตรวจ', body: 'กรุณาเลือกจุดตรวจก่อนสแกน' })
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('scan:error', {
         success: false,
@@ -324,6 +286,10 @@ ipcMain.handle('auth:verify', async () => {
       status
     }
   }
+})
+
+ipcMain.handle('notify:show', (event, { type, title, body }) => {
+  showNotification({ type, title, body })
 })
 
 ipcMain.handle('scan:test', async (event, barcode) => {
