@@ -104,7 +104,7 @@ function initScanner(onScan) {
         // Suppress these keystrokes so they don't reach any focused input field
         if (altHeld && isDown && vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9) {
           altBuf += String(vk - VK_NUMPAD0)
-          return 1
+          return CallNextHookEx(hhook, nCode, wParam, lParam)
         }
 
         // ── Normal key processing ─────────────────────────
