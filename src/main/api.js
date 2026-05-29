@@ -79,8 +79,10 @@ async function login(email, password, rememberMe = false) {
  * ดึงรายการจุดตรวจ/สถานีทั้งหมดสำหรับ dropdown
  * @returns {Promise}
  */
-async function getStations() {
-  const response = await api.get('/stations/dropdown?isActive=true&limit=100')
+async function getStations(search = '') {
+  const params = new URLSearchParams({ isActive: 'true', limit: '100' })
+  if (search) params.set('search', search)
+  const response = await api.get(`/stations/dropdown?${params.toString()}`)
   return {
     success: true,
     data: response.data.data || []

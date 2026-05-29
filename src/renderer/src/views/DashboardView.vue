@@ -38,9 +38,31 @@
     <div v-if="showStationSelect" class="card animate-in">
       <div class="flex items-center justify-between mb-3">
         <p class="text-sm font-semibold text-[#09090b]">เลือกจุดตรวจ</p>
-        <span class="text-xs text-zinc-400">
-          {{ authStore.selectedStations.length > 0 ? `เลือก ${authStore.selectedStations.length} จุด` : '' }}
-        </span>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-zinc-400">
+            {{ authStore.selectedStations.length > 0 ? `เลือก ${authStore.selectedStations.length} จุด` : '' }}
+          </span>
+          <button v-if="authStore.selectedStations.length > 0"
+            @click="authStore.clearStations()"
+            class="text-[11px] font-medium transition-colors px-2 py-0.5 rounded-lg"
+            style="color:#ef4444; background:#fff5f5; border:1px solid #fecaca;">
+            ล้างทั้งหมด
+          </button>
+        </div>
+      </div>
+
+      <div class="relative mb-2">
+        <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none"
+          fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input
+          v-model="stationSearch"
+          type="text"
+          placeholder="ค้นหาจุดตรวจ..."
+          class="input w-full text-xs py-1.5 pl-8 pr-3"
+          @input="onStationSearch"
+        />
       </div>
 
       <div v-if="isLoadingStations" class="flex justify-center py-5">
@@ -473,6 +495,8 @@ const isSavingRemark = ref(false)
 
 const stations = ref([])
 const isLoadingStations = ref(false)
+const stationSearch = ref('')
+let searchTimer = null
 const testBarcode = ref('')
 const isTestLoading = ref(false)
 
@@ -493,10 +517,10 @@ function stationName(s) {
   return found ? found.name : `#${s.id}`
 }
 
-async function loadStations() {
+async function loadStations(search = '') {
   isLoadingStations.value = true
   try {
-    const result = await window.api.getStations()
+    const result = await window.api.getStations(search)
     if (result.success) {
       stations.value = result.data
       authStore.selectedStations.forEach(sel => {
@@ -511,6 +535,11 @@ async function loadStations() {
   } finally {
     isLoadingStations.value = false
   }
+}
+
+function onStationSearch() {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => loadStations(stationSearch.value), 300)
 }
 
 function toggleStationPanel() {

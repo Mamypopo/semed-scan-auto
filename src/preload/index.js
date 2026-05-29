@@ -48,7 +48,7 @@ contextBridge.exposeInMainWorld('api', {
    * ดึงรายการจุดตรวจที่ผู้ใช้มีสิทธิ์เข้าถึง
    * @returns {Promise<Object>} - { success, data: [...] }
    */
-  getStations: () => ipcRenderer.invoke('stations:get'),
+  getStations: (search) => ipcRenderer.invoke('stations:get', search),
   
   // ============ Event Listeners ============
   

@@ -179,6 +179,7 @@ async function handleScan(barcode) {
           const errMsg = `จุดตรวจไม่ตรงกัน: บาร์โค้ดนี้เป็นของจุดตรวจ #${embeddedStationId} แต่ไม่อยู่ในรายการที่เลือก`
           console.warn(`⛔ ${errMsg}`)
           showNotification({ type: 'error', title: '⛔ จุดตรวจไม่ตรงกัน', body: errMsg })
+          if (isSoundEnabled()) playSound('error')
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('scan:error', {
               success: false,
@@ -196,6 +197,7 @@ async function handleScan(barcode) {
     // ไม่มี stationId ใน barcode → error ทั้ง auto และ manual
     const errMsg = 'กรุณาระบุ Station ID ในบาร์โค้ด (CN.STATION_ID)'
     showNotification({ type: 'error', title: '⛔ รูปแบบไม่ถูกต้อง', body: errMsg })
+    if (isSoundEnabled()) playSound('error')
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('scan:error', {
         success: false,
@@ -210,6 +212,7 @@ async function handleScan(barcode) {
 
   if (!stationIds.length) {
     showNotification({ type: 'error', title: '⚠️ ไม่มีจุดตรวจ', body: 'กรุณาเลือกจุดตรวจก่อนสแกน' })
+    if (isSoundEnabled()) playSound('error')
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('scan:error', {
         success: false,
@@ -385,9 +388,9 @@ ipcMain.handle('auth:microsoft', async () => {
   })
 })
 
-ipcMain.handle('stations:get', async () => {
+ipcMain.handle('stations:get', async (event, search) => {
   try {
-    const result = await getStations()
+    const result = await getStations(search)
     sendLog('info', `โหลดจุดตรวจ: ${result.data?.length || 0} รายการ`)
     return JSON.parse(JSON.stringify(result))
   } catch (error) {

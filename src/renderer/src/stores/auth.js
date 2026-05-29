@@ -38,6 +38,11 @@ export const useAuthStore = defineStore('auth', () => {
     await window.api.saveConfig({ scanInputMode: scanInputMode.value })
   }
 
+  async function clearStations() {
+    selectedStations.value = []
+    await saveStationsToConfig()
+  }
+
   async function toggleStation(station) {
     const idx = selectedStations.value.findIndex(s => s.id === station.id)
     if (idx >= 0) {
@@ -180,6 +185,7 @@ export const useAuthStore = defineStore('auth', () => {
     hasStations,
     isStationSelected,
     toggleStation,
+    clearStations,
     toggleScanInputMode,
     login,
     loginWithMicrosoft,
