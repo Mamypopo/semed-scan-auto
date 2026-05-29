@@ -2,16 +2,14 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import Swal from 'sweetalert2'
 
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 10000,
-  timerProgressBar: true,
-  customClass: {
-    popup: 'swal-app'
-  }
-})
+// const Toast = Swal.mixin({
+//   toast: true,
+//   position: 'top-end',
+//   showConfirmButton: false,
+//   timer: 10000,
+//   timerProgressBar: true,
+//   customClass: { popup: 'swal-app' }
+// })
 
 export const useScannerStore = defineStore('scanner', () => {
   const scanHistory = ref([])
@@ -51,16 +49,16 @@ export const useScannerStore = defineStore('scanner', () => {
           lastScan.value = { ...lastScan.value, cancelled: true }
         }
         const msg = result.data?.message || 'ยกเลิกการสแกนสำเร็จ'
-        Toast.fire({ icon: 'success', title: msg })
+        // Toast.fire({ icon: 'success', title: msg })
         window.api.showNotification({ type: 'warning', title: '🚫 ยกเลิกสแกน', body: `${scan.patientName || ''}\n${msg}` })
         window.api.playSound('success')
       } else {
         const msg = result.data?.message || result.message || 'ยกเลิกไม่สำเร็จ'
-        Toast.fire({ icon: 'error', title: msg })
+        // Toast.fire({ icon: 'error', title: msg })
         window.api.showNotification({ type: 'error', title: '❌ ยกเลิกไม่สำเร็จ', body: msg })
       }
     } catch (e) {
-      Toast.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด' })
+      // Toast.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด' })
     } finally {
       cancellingId.value = null
     }
@@ -94,10 +92,10 @@ export const useScannerStore = defineStore('scanner', () => {
       if (scanHistory.value.length > 20) scanHistory.value = scanHistory.value.slice(0, 20)
       lastScan.value = scanResult
 
-      Toast.fire({
-        icon: isNewScan ? 'success' : 'warning',
-        title: backendMsg || `สแกนสำเร็จ: ${scanResult.patientName}`
-      })
+      // Toast.fire({
+      //   icon: isNewScan ? 'success' : 'warning',
+      //   title: backendMsg || `สแกนสำเร็จ: ${scanResult.patientName}`
+      // })
     })
 
     window.api.onScanError((data) => {
@@ -112,10 +110,10 @@ export const useScannerStore = defineStore('scanner', () => {
       if (scanHistory.value.length > 20) scanHistory.value = scanHistory.value.slice(0, 20)
       lastScan.value = errorResult
 
-      Toast.fire({
-        icon: 'error',
-        title: data.error
-      })
+      // Toast.fire({
+      //   icon: 'error',
+      //   title: data.error
+      // })
     })
   }
 
