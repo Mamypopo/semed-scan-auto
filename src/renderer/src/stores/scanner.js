@@ -53,6 +53,7 @@ export const useScannerStore = defineStore('scanner', () => {
         const msg = result.data?.message || 'ยกเลิกการสแกนสำเร็จ'
         Toast.fire({ icon: 'success', title: msg })
         window.api.showNotification({ type: 'warning', title: '🚫 ยกเลิกสแกน', body: `${scan.patientName || ''}\n${msg}` })
+        window.api.playSound('success')
       } else {
         const msg = result.data?.message || result.message || 'ยกเลิกไม่สำเร็จ'
         Toast.fire({ icon: 'error', title: msg })

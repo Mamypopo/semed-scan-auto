@@ -309,6 +309,10 @@ ipcMain.handle('notify:show', (event, { type, title, body }) => {
   showNotification({ type, title, body })
 })
 
+ipcMain.handle('sound:play', (event, name) => {
+  if (isSoundEnabled()) playSound(name)
+})
+
 ipcMain.handle('scan:test', async (event, barcode) => {
   console.log(`🧪 Test scan triggered from UI: "${barcode}"`)
   sendLog('info', `Manual scan: "${barcode}"`)
