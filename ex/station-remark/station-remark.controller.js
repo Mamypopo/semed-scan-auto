@@ -1,5 +1,6 @@
 import * as stationRemarkService from './station-remark.service.js'
 import { createSystemLog } from '../utils/logger.js'
+import { emitScanDashboardUpdate } from '../socket/socket.service.js'
 
 /**
  * สร้างหรืออัปเดต StationRemark
@@ -7,7 +8,7 @@ import { createSystemLog } from '../utils/logger.js'
  */
 export const upsertStationRemark = async (req, res) => {
   try {
-    const { patientCNGroupId, patientMembershipId, stationId, reasonId, remark } = req.body
+    const { patientCNGroupId, patientMembershipId, stationId, reasonId, remark, cnGroupId } = req.body
     const userId = req.user?.id
 
     // ต้องมีอย่างน้อย 1 ตัว (patientCNGroupId หรือ patientMembershipId)
@@ -42,6 +43,10 @@ export const upsertStationRemark = async (req, res) => {
       )
     }
 
+    const resolvedCnGroupId = stationRemark.patientCNGroup?.cnGroupId || cnGroupId
+    const io = req.app.get('io')
+    if (io && resolvedCnGroupId) emitScanDashboardUpdate(io, resolvedCnGroupId)
+
     res.json({
       success: true,
       data: stationRemark,
@@ -63,10 +68,11 @@ export const upsertStationRemark = async (req, res) => {
 export const deleteRemarkByCNG = async (req, res) => {
   try {
     const { patientCNGroupId, stationId } = req.params
+    const { cnGroupId } = req.query
     const userId = req.user?.id
 
     const stationRemark = await stationRemarkService.deleteRemarkByCNG(
-      patientCNGroupId, 
+      patientCNGroupId,
       stationId
     )
 
@@ -79,6 +85,10 @@ export const deleteRemarkByCNG = async (req, res) => {
         null
       )
     }
+
+    const resolvedCnGroupId = stationRemark.patientCNGroup?.cnGroupId || cnGroupId
+    const io = req.app.get('io')
+    if (io && resolvedCnGroupId) emitScanDashboardUpdate(io, resolvedCnGroupId)
 
     res.json({ success: true, message: 'ลบหมายเหตุสำเร็จ' })
   } catch (error) {
@@ -93,10 +103,11 @@ export const deleteRemarkByCNG = async (req, res) => {
 export const deleteRemarkByMembership = async (req, res) => {
   try {
     const { patientMembershipId, stationId } = req.params
+    const { cnGroupId } = req.query
     const userId = req.user?.id
 
     const stationRemark = await stationRemarkService.deleteRemarkByMembership(
-      patientMembershipId, 
+      patientMembershipId,
       stationId
     )
 
@@ -109,6 +120,9 @@ export const deleteRemarkByMembership = async (req, res) => {
         null
       )
     }
+
+    const io = req.app.get('io')
+    if (io && cnGroupId) emitScanDashboardUpdate(io, cnGroupId)
 
     res.json({ success: true, message: 'ลบหมายเหตุสำเร็จ' })
   } catch (error) {

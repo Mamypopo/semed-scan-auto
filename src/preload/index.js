@@ -83,6 +83,7 @@ contextBridge.exposeInMainWorld('api', {
   lookupPatient: (cn, stationId) => ipcRenderer.invoke('patient:lookup', { cn, stationId }),
   getRemarkReasons: () => ipcRenderer.invoke('remark-reasons:get'),
   createStationRemark: (data) => ipcRenderer.invoke('station-remark:create', data),
+  deleteStationRemark: (patientCNGroupId, stationId, cnGroupId) => ipcRenderer.invoke('station-remark:delete', { patientCNGroupId, stationId, cnGroupId }),
 
   onLog: (callback) => {
     ipcRenderer.on('app:log', (_, data) => callback(data))

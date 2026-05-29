@@ -454,11 +454,19 @@
               </select>
               <textarea v-model="remarkForm.remark" class="input text-xs py-2 w-full resize-none" rows="2"
                 placeholder="หมายเหตุเพิ่มเติม (ไม่บังคับ)"></textarea>
-              <button @click="submitRemark" :disabled="isSavingRemark"
-                class="w-full py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-40 transition-all"
-                style="background:#696CFF; box-shadow:0 2px 8px -3px rgba(105,108,255,0.5);">
-                {{ isSavingRemark ? 'กำลังบันทึก...' : 'บันทึกหมายเหตุ' }}
-              </button>
+              <div class="flex gap-2">
+                <button @click="submitRemark" :disabled="isSavingRemark"
+                  class="flex-1 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-40 transition-all"
+                  style="background:#696CFF; box-shadow:0 2px 8px -3px rgba(105,108,255,0.5);">
+                  {{ isSavingRemark ? 'กำลังบันทึก...' : 'บันทึกหมายเหตุ' }}
+                </button>
+                <button v-if="foundPatient.existingRemark"
+                  @click="deleteRemark" :disabled="isDeletingRemark"
+                  class="px-3 py-2 rounded-xl text-xs font-semibold disabled:opacity-40 transition-all"
+                  style="color:#ef4444; background:#fff5f5; border:1px solid #fecaca;">
+                  {{ isDeletingRemark ? '...' : 'ลบ' }}
+                </button>
+              </div>
             </div>
           </template>
         </div>
@@ -492,6 +500,7 @@ const foundPatient = ref(null)
 const remarkReasons = ref([])
 const isLookingUp = ref(false)
 const isSavingRemark = ref(false)
+const isDeletingRemark = ref(false)
 
 const stations = ref([])
 const isLoadingStations = ref(false)
@@ -591,6 +600,41 @@ async function lookupPatient() {
   }
 }
 
+async function deleteRemark() {
+  if (!foundPatient.value || isDeletingRemark.value) return
+  const { default: Swal } = await import('sweetalert2')
+  const confirmed = await Swal.fire({
+    title: 'ยืนยันการลบหมายเหตุ',
+    text: `ลบหมายเหตุของ ${foundPatient.value.name} ที่จุดตรวจ ${foundPatient.value.station?.name}`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'ลบ',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#ef4444',
+    customClass: { popup: 'swal-app' }
+  })
+  if (!confirmed.isConfirmed) return
+  isDeletingRemark.value = true
+  try {
+    const result = await window.api.deleteStationRemark(
+      foundPatient.value.patientCNGroupId,
+      foundPatient.value.station.id,
+      foundPatient.value.cnGroupId || null
+    )
+    if (result.success !== false) {
+      remarkForm.cn = ''
+      remarkForm.reasonId = ''
+      remarkForm.remark = ''
+      foundPatient.value = null
+      Swal.fire({ icon: 'success', title: 'ลบหมายเหตุสำเร็จ', timer: 2000, showConfirmButton: false, customClass: { popup: 'swal-app' } })
+    } else {
+      Swal.fire({ icon: 'error', title: 'ลบไม่สำเร็จ', text: result.message, customClass: { popup: 'swal-app' } })
+    }
+  } finally {
+    isDeletingRemark.value = false
+  }
+}
+
 async function submitRemark() {
   if (!foundPatient.value || isSavingRemark.value) return
   isSavingRemark.value = true
@@ -599,13 +643,18 @@ async function submitRemark() {
       patientCNGroupId: foundPatient.value.patientCNGroupId,
       stationId: foundPatient.value.station.id,
       reasonId: remarkForm.reasonId || null,
-      remark: remarkForm.remark || null
+      remark: remarkForm.remark || null,
+      cnGroupId: foundPatient.value.cnGroupId || null
     })
     if (result.success) {
-      remarkForm.cn = ''
-      remarkForm.reasonId = ''
-      remarkForm.remark = ''
-      foundPatient.value = null
+      // อัพเดท existingRemark ให้แสดงปุ่มลบได้ทันที ไม่ต้อง lookup ใหม่
+      foundPatient.value = {
+        ...foundPatient.value,
+        existingRemark: {
+          reasonId: remarkForm.reasonId || null,
+          remark: remarkForm.remark || null
+        }
+      }
       import('sweetalert2').then(({ default: Swal }) => {
         Swal.fire({ icon: 'success', title: 'บันทึกหมายเหตุสำเร็จ', timer: 2000, showConfirmButton: false, customClass: { popup: 'swal-app' } })
       })

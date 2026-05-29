@@ -11,6 +11,7 @@ export const lookupPatientByCN = async (cn, stationId) => {
     where: { cn: cn.trim() },
     select: {
       id: true,
+      cnGroupId: true,
       cn: true,
       employeeCode: true,
       position: true,
@@ -72,6 +73,7 @@ export const lookupPatientByCN = async (cn, stationId) => {
 
   return {
     patientCNGroupId: membership.id,
+    cnGroupId: membership.cnGroupId,
     cn: membership.cn,
     name: `${membership.patient?.prefix || ''} ${membership.patient?.first_name || ''} ${membership.patient?.last_name || ''}`.trim(),
     hn: membership.patient?.hn || null,

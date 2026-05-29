@@ -6,7 +6,7 @@ const { showNotification } = require('./notifier')
 const { saveConfig, clearConfig, getStationIds, getScanInputMode } = require('./store')
 const { playSound } = require('./sound')
 const { getMergedConfig, shouldOpenDevtools, isSoundEnabled, getApiBaseUrl } = require('./config')
-const { login, getStations, sendScanData, cancelScan, verifyToken, lookupPatient, getRemarkReasons, createStationRemark } = require('./api')
+const { login, getStations, sendScanData, cancelScan, verifyToken, lookupPatient, getRemarkReasons, createStationRemark, deleteStationRemark } = require('./api')
 const { initScanner } = require('./scanner')
 
 let mainWindow
@@ -431,6 +431,18 @@ ipcMain.handle('remark-reasons:get', async () => {
 ipcMain.handle('station-remark:create', async (event, data) => {
   try {
     const result = await createStationRemark(data)
+    return JSON.parse(JSON.stringify(result))
+  } catch (error) {
+    return {
+      success: false,
+      message: error.response?.data?.message || error.message
+    }
+  }
+})
+
+ipcMain.handle('station-remark:delete', async (event, { patientCNGroupId, stationId, cnGroupId }) => {
+  try {
+    const result = await deleteStationRemark(patientCNGroupId, stationId, cnGroupId)
     return JSON.parse(JSON.stringify(result))
   } catch (error) {
     return {

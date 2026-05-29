@@ -146,6 +146,12 @@ async function cancelScan(scanId) {
   return api.delete(`/scan/${scanId}`)
 }
 
+async function deleteStationRemark(patientCNGroupId, stationId, cnGroupId) {
+  const params = cnGroupId ? `?cnGroupId=${cnGroupId}` : ''
+  const response = await api.delete(`/station-remarks/cng/${patientCNGroupId}/station/${stationId}${params}`)
+  return response.data
+}
+
 /**
  * เช็คว่า token ยังใช้งานได้หรือไม่ (เรียก /auth/me)
  * @returns {Promise}
@@ -165,5 +171,6 @@ module.exports = {
   verifyToken,
   lookupPatient,
   getRemarkReasons,
-  createStationRemark
+  createStationRemark,
+  deleteStationRemark
 }

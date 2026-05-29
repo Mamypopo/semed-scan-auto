@@ -57,7 +57,8 @@ export const upsertStationRemark = async (data) => {
           patientCNGroup: {
             select: {
               id: true,
-              cn: true
+              cn: true,
+              cnGroupId: true
             }
           },
           patientMembership: {
@@ -95,7 +96,8 @@ export const upsertStationRemark = async (data) => {
           patientCNGroup: {
             select: {
               id: true,
-              cn: true
+              cn: true,
+              cnGroupId: true
             }
           },
           patientMembership: {
@@ -122,39 +124,38 @@ export const upsertStationRemark = async (data) => {
 // stationRemarkService.js (Backend Service)
 
 /**
- * ลบหมายเหตุสำหรับกลุ่ม CNG
+ * ลบ StationRemark สำหรับกลุ่ม CNG
+ * DELETE /api/v1/station-remarks/cng/:patientCNGroupId/station/:stationId
  */
-export const deleteRemarkByCNG = async (patientCNGroupId, stationId) => {
+export const deleteRemarkByCNG = async (req, res) => {
   try {
-    const sId = parseInt(stationId)
-    if (isNaN(sId)) throw new Error('Station ID ต้องเป็นตัวเลข')
+    const { patientCNGroupId, stationId } = req.params
+    const { cnGroupId } = req.query
+    const userId = req.user?.id
 
-    // 1. ตรวจสอบว่ามีข้อมูลอยู่จริงหรือไม่
-    const existing = await prisma.stationRemark.findUnique({
-      where: {
-        patientCNGroupId_stationId: {
-          patientCNGroupId,
-          stationId: sId
-        }
-      }
-    })
+    const stationRemark = await stationRemarkService.deleteRemarkByCNG(
+      patientCNGroupId,
+      stationId
+    )
 
-    if (!existing) throw new Error('ไม่พบข้อมูลหมายเหตุที่ต้องการลบ')
+    if (userId && stationRemark) {
+      await createSystemLog(
+        req,
+        'DELETE_STATION_REMARK',
+        `ลบหมายเหตุจุดตรวจ: ${stationRemark.station.name} สำหรับ CN: ${stationRemark.patientCNGroup?.cn}`,
+        null,
+        null
+      )
+    }
 
-    // 2. ดำเนินการลบ
-    return await prisma.stationRemark.delete({
-      where: { id: existing.id },
-      include: {
-        station: { select: { name: true } },
-        patientCNGroup: { select: { cn: true } }
-      }
-    })
+    const io = req.app.get('io')
+    if (io && cnGroupId) emitScanDashboardUpdate(io, cnGroupId)
+
+    res.json({ success: true, message: 'ลบหมายเหตุสำเร็จ' })
   } catch (error) {
-    console.error('❌ Delete Remark By CNG Service Error:', error)
-    throw error
+    res.status(500).json({ success: false, message: error.message })
   }
 }
-
 /**
  * ลบหมายเหตุสำหรับกลุ่ม Membership
  */
