@@ -58,9 +58,10 @@ router.get(
   scanController.getPatientsByStation
 );
 
-// ดึงรายชื่อ patients ตาม Station สำหรับ Customer (Public view - summary เป็น total เสมอ)
+// ดึงรายชื่อ patients ตาม Station สำหรับ Customer
 router.get(
   "/customer/:cnGroupId/:stationId/patients",
+  authenticateToken,
   scanController.getPatientsByStationForCustomer
 );
 
