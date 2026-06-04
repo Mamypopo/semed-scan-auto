@@ -148,10 +148,17 @@ function notifyError(error) {
 
 let lastScanBarcode = ''
 let lastScanTime = 0
+let isScanPaused = false
+
+ipcMain.handle('scan:setPaused', (_, paused) => {
+  isScanPaused = paused
+})
 
 async function handleScan(barcode) {
   // ออกจาก koffi hook callback context ก่อน เพื่อให้ Electron API ทำงานได้ปลอดภัย
   await new Promise(resolve => setImmediate(resolve))
+
+  if (isScanPaused) return
 
   // ป้องกัน double scan (global + renderer ทำงานพร้อมกัน)
   const now = Date.now()

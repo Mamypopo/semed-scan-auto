@@ -448,12 +448,14 @@
           <template v-if="foundPatient.hasExamAtStation">
             <div class="space-y-2">
               <p class="text-[10px] font-medium text-zinc-400">บันทึกหมายเหตุ</p>
-              <select v-model="remarkForm.reasonId" class="input text-xs py-2 w-full">
+              <select v-model="remarkForm.reasonId" class="input text-xs py-2 w-full"
+                @focus="window.api.setScanPaused(true)" @blur="window.api.setScanPaused(false)">
                 <option value="">-- เลือกเหตุผล (ไม่บังคับ) --</option>
                 <option v-for="r in remarkReasons" :key="r.id" :value="r.id">{{ r.title }}</option>
               </select>
               <textarea v-model="remarkForm.remark" class="input text-xs py-2 w-full resize-none" rows="2"
-                placeholder="หมายเหตุเพิ่มเติม (ไม่บังคับ)"></textarea>
+                placeholder="หมายเหตุเพิ่มเติม (ไม่บังคับ)"
+                @focus="window.api.setScanPaused(true)" @blur="window.api.setScanPaused(false)"></textarea>
               <div class="flex gap-2">
                 <button @click="submitRemark" :disabled="isSavingRemark"
                   class="flex-1 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-40 transition-all"

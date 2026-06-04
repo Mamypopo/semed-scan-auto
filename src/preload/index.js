@@ -72,6 +72,7 @@ contextBridge.exposeInMainWorld('api', {
    * ลบ event listener (สำหรับ cleanup)
    */
   testScan: (barcode) => ipcRenderer.invoke('scan:test', barcode),
+  setScanPaused: (paused) => ipcRenderer.invoke('scan:setPaused', paused),
   cancelScan: (scanId) => ipcRenderer.invoke('scan:cancel', scanId),
   showNotification: (opts) => ipcRenderer.invoke('notify:show', opts),
   playSound: (name) => ipcRenderer.invoke('sound:play', name),
