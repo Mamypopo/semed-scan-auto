@@ -210,11 +210,16 @@ if (!ok) {
 dbg('📡 Scanner worker started — Raw Input INPUTSINK active')
 
 // ── PeekMessage polling (10ms) — keeps Node.js event loop alive ──
-const msg = {}
+// MSG must be a real native Buffer, not a plain object: koffi only writes
+// PeekMessageW's output into the pointed-to memory, it does not copy results
+// back into a plain JS object. Using `{}` here silently discarded every
+// retrieved message (always decoded as zeroed/empty), so DispatchMessageW
+// never actually delivered real WM_INPUT data to the WndProc.
+const msgBuf = Buffer.alloc(koffi.sizeof(MSG))
 setInterval(() => {
-  while (PeekMessageW(msg, null, 0, 0, PM_REMOVE) > 0) {
-    TranslateMessage(msg)
-    DispatchMessageW(msg)
+  while (PeekMessageW(msgBuf, null, 0, 0, PM_REMOVE) > 0) {
+    TranslateMessage(msgBuf)
+    DispatchMessageW(msgBuf)
   }
 }, 10)
 

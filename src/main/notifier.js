@@ -65,6 +65,11 @@ function showNotification({ type = 'success', title = '', body = '' }) {
     }
   })
 
+  // 'screen-saver' คือระดับสูงสุดที่ Electron รองรับ — ช่วยให้ลอยเหนือโปรแกรมที่รัน
+  // fullscreen (เช่น DRCC) ได้ดีกว่า alwaysOnTop เฉยๆ แต่ไม่การันตีเหนือ exclusive
+  // fullscreen (DirectX) เพราะโปรแกรมแบบนั้นควบคุม GPU surface เองนอกเหนือ DWM
+  win.setAlwaysOnTop(true, 'screen-saver')
+
   const params = new URLSearchParams({ type, title, body })
   const htmlFile = path.join(__dirname, '../../assets/notification.html')
   win.loadURL(`${pathToFileURL(htmlFile).href}?${params.toString()}`)

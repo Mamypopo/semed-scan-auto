@@ -1,15 +1,17 @@
 const { app, BrowserWindow, ipcMain, Menu } = require('electron')
 const { autoUpdater } = require('electron-updater')
 const path = require('path')
+const { fork } = require('child_process')
+const readline = require('readline')
 const { showNotification } = require('./notifier')
 
 const { saveConfig, clearConfig, getStationIds, getScanInputMode } = require('./store')
 const { playSound } = require('./sound')
 const { getMergedConfig, shouldOpenDevtools, isSoundEnabled, getApiBaseUrl } = require('./config')
 const { login, getStations, sendScanData, cancelScan, verifyToken, lookupPatient, getRemarkReasons, createStationRemark, deleteStationRemark } = require('./api')
-const { initScanner } = require('./scanner')
 
 let mainWindow
+let scannerWorker
 
 function sendLog(level, message, detail = null) {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -77,7 +79,7 @@ function notifySuccess(data) {
   ].filter(Boolean).join('\n')
 
   showNotification({ type: isDuplicate ? 'warning' : 'success', title, body })
-  
+
   sendLog('success', `สแกนสำเร็จ: ${patientName}`, data?.station?.name ? `Station: ${data.station.name}` : null)
 
   // เล่นเสียง
@@ -130,7 +132,7 @@ function notifyError(error) {
   if (isSoundEnabled()) playSound('error')
 
   showNotification({ type: 'error', title, body: message })
-  
+
   // ส่งไปยัง Renderer
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('scan:error', {
@@ -246,6 +248,54 @@ async function handleScan(barcode) {
     console.error('   message:', err?.response?.data?.message || err?.message)
     console.error('   data   :', JSON.stringify(err?.response?.data))
     notifyError(err)
+  }
+}
+
+// ==========================================
+// Scanner Worker (Raw Input, separate process)
+// ==========================================
+// Runs as its own Node child process using the Raw Input API (RIDEV_INPUTSINK)
+// instead of a WH_KEYBOARD_LL global hook. Raw Input receives a passive copy of
+// keyboard events from Windows — it does not sit in the global hook chain, so it
+// can't be blocked by (or block) other apps' own hooks, and it can't freeze the
+// Electron main thread the way an in-process low-level hook can.
+function startScannerWorker() {
+  const workerPath = path.join(__dirname, 'scanner-worker.js')
+
+  scannerWorker = fork(workerPath, [], {
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc']
+  })
+
+  readline.createInterface({ input: scannerWorker.stdout }).on('line', (line) => {
+    const barcode = line.trim()
+    if (barcode) handleScan(barcode)
+  })
+
+  readline.createInterface({ input: scannerWorker.stderr }).on('line', (line) => {
+    console.log('[scanner-worker]', line)
+  })
+
+  scannerWorker.on('spawn', () => {
+    console.log(`📡 scanner-worker spawned (pid ${scannerWorker.pid})`)
+    sendLog('info', `Scanner worker เริ่มทำงาน (pid ${scannerWorker.pid})`)
+  })
+
+  scannerWorker.on('error', (err) => {
+    console.error('❌ scanner-worker failed to start:', err.message)
+    sendLog('error', 'Scanner worker เริ่มไม่สำเร็จ', err.message)
+  })
+
+  scannerWorker.on('exit', (code, signal) => {
+    console.error(`❌ scanner-worker exited (code=${code}, signal=${signal})`)
+    sendLog('error', `Scanner worker หยุดทำงาน (code ${code}${signal ? `, signal ${signal}` : ''})`)
+  })
+}
+
+function stopScannerWorker() {
+  if (scannerWorker && !scannerWorker.killed) {
+    scannerWorker.kill()
+    scannerWorker = null
   }
 }
 
@@ -527,7 +577,7 @@ ipcMain.handle('updater:install', () => {
 
 app.whenReady().then(() => {
   createWindow()
-  initScanner(handleScan)
+  startScannerWorker()
 
   mainWindow.webContents.once('did-finish-load', () => {
     sendLog('info', 'แอปเริ่มต้นแล้ว', `API: ${getApiBaseUrl()}`)
@@ -553,4 +603,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('before-quit', () => {
+  stopScannerWorker()
 })
