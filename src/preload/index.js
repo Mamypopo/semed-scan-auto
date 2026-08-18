@@ -90,18 +90,9 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('app:log', (_, data) => callback(data))
   },
 
-  checkForUpdates: () => ipcRenderer.invoke('updater:check'),
   downloadUpdate: () => ipcRenderer.invoke('updater:download'),
   installUpdate: () => ipcRenderer.invoke('updater:install'),
   onUpdaterStatus: (callback) => {
     ipcRenderer.on('updater:status', (_, data) => callback(data))
-  },
-
-  removeAllListeners: () => {
-    ipcRenderer.removeAllListeners('scan:success')
-    ipcRenderer.removeAllListeners('scan:error')
-    ipcRenderer.removeAllListeners('auth:expired')
-    ipcRenderer.removeAllListeners('app:log')
-    ipcRenderer.removeAllListeners('updater:status')
   }
 })

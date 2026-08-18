@@ -8,7 +8,7 @@ const WIDTH    = 310
 const HEIGHT   = 100
 const MARGIN   = 16
 const GAP      = 8
-const DURATION = 5000
+const DURATION = 3000
 const MAX_VISIBLE = 3
 
 const active = []
@@ -77,7 +77,7 @@ function showNotification({ type = 'success', title = '', body = '' }) {
   // fullscreen (DirectX) เพราะโปรแกรมแบบนั้นควบคุม GPU surface เองนอกเหนือ DWM
   win.setAlwaysOnTop(true, 'screen-saver')
 
-  const params = new URLSearchParams({ type, title, body })
+  const params = new URLSearchParams({ type, title, body, duration: DURATION })
   const htmlFile = path.join(__dirname, '../../assets/notification.html')
   win.loadURL(`${pathToFileURL(htmlFile).href}?${params.toString()}`)
 

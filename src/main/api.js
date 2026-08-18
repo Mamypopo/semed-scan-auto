@@ -89,14 +89,6 @@ async function getStations(search = '') {
   }
 }
 
-async function getCNGroups() {
-  const response = await api.get('/cngroups/dropdown?isActive=true&limit=100')
-  return {
-    success: true,
-    data: response.data.data || response.data || []
-  }
-}
-
 // ==========================================
 // Scan APIs
 // ==========================================
@@ -118,7 +110,8 @@ async function sendScanData(barcode, stationId) {
     scanType: 'WINAPP'
   }
 
-  console.log(`📡 Sending scan to /scan/checkpoint (station ${stationId}):`, payload)
+  // ปิดไว้: payload มี cn (รหัสผู้ป่วย) — เปิดใช้เฉพาะตอน debug
+  // console.log(`📡 Sending scan to /scan/checkpoint (station ${stationId}):`, payload)
   return api.post('/scan/checkpoint', payload)
 }
 
@@ -165,7 +158,6 @@ module.exports = {
   api,
   login,
   getStations,
-  getCNGroups,
   sendScanData,
   cancelScan,
   verifyToken,

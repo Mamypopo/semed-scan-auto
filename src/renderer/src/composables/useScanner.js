@@ -22,7 +22,7 @@ export function useScanner() {
       if (buffer.length > MIN_BARCODE_LENGTH) {
         const scannedCode = buffer
         buffer = ''
-        console.log(`✅ [Renderer] Barcode: "${scannedCode}"`)
+        // console.log(`✅ [Renderer] Barcode: "${scannedCode}"`) // ปิดไว้: มีบาร์โค้ด/cn ผู้ป่วย
         window.api.testScan(scannedCode)
       } else {
         buffer = ''

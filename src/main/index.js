@@ -7,7 +7,7 @@ const { showNotification } = require('./notifier')
 
 const { saveConfig, clearConfig, getStationIds, getScanInputMode } = require('./store')
 const { playSound } = require('./sound')
-const { getMergedConfig, shouldOpenDevtools, isSoundEnabled, getApiBaseUrl } = require('./config')
+const { getMergedConfig, isSoundEnabled, getApiBaseUrl } = require('./config')
 const { login, getStations, sendScanData, cancelScan, verifyToken, lookupPatient, getRemarkReasons, createStationRemark, deleteStationRemark } = require('./api')
 
 let mainWindow
@@ -181,7 +181,7 @@ async function handleScan(barcode) {
       if (inputMode === 'auto') {
         // Auto: ใช้ stationId จาก barcode ตรงๆ ไม่ validate
         stationIds = [embeddedStationId]
-        console.log(`🔍 [Auto] cn="${cn}" stationId=${embeddedStationId}`)
+        // console.log(`🔍 [Auto] cn="${cn}" stationId=${embeddedStationId}`) // ปิดไว้: มี cn ผู้ป่วย
       } else {
         // Manual: barcode ต้องมี stationId และต้องตรงกับที่เลือกไว้
         if (!stationIds.includes(embeddedStationId)) {
@@ -199,7 +199,7 @@ async function handleScan(barcode) {
           return
         }
         stationIds = [embeddedStationId]
-        console.log(`🔍 [Manual] cn="${cn}" stationId=${embeddedStationId}`)
+        // console.log(`🔍 [Manual] cn="${cn}" stationId=${embeddedStationId}`) // ปิดไว้: มี cn ผู้ป่วย
       }
     }
   } else {
@@ -217,7 +217,7 @@ async function handleScan(barcode) {
     return
   }
 
-  console.log(`🔎 mode="${inputMode}" stationIds=${JSON.stringify(stationIds)} cn="${cn}"`)
+  // console.log(`🔎 mode="${inputMode}" stationIds=${JSON.stringify(stationIds)} cn="${cn}"`) // ปิดไว้: มี cn ผู้ป่วย
 
   if (!stationIds.length) {
     showNotification({ type: 'error', title: '⚠️ ไม่มีจุดตรวจ', body: 'กรุณาเลือกจุดตรวจก่อนสแกน' })
@@ -232,14 +232,15 @@ async function handleScan(barcode) {
     return
   }
 
-  console.log(`🔄 สแกน: cn="${cn}" → ${stationIds.length} จุดตรวจ`)
+  // console.log(`🔄 สแกน: cn="${cn}" → ${stationIds.length} จุดตรวจ`) // ปิดไว้: มี cn ผู้ป่วย
   const results = await Promise.allSettled(
     stationIds.map(id => sendScanData(cn, id))
   )
 
   const fulfilled = results.filter(r => r.status === 'fulfilled')
   if (fulfilled.length > 0) {
-    console.log('✅ สำเร็จ:', fulfilled[0].value.data)
+    // ปิดไว้: response เต็มจากระบบหลักมีข้อมูลผู้ป่วย (ชื่อ, HN, citizenId ฯลฯ) — เปิดใช้เฉพาะตอน debug เท่านั้น
+    // console.log('✅ สำเร็จ:', fulfilled[0].value.data)
     notifySuccess(fulfilled[0].value.data)
   } else {
     const err = results[0].reason
@@ -371,7 +372,7 @@ ipcMain.handle('sound:play', (event, name) => {
 })
 
 ipcMain.handle('scan:test', async (event, barcode) => {
-  console.log(`🧪 Test scan triggered from UI: "${barcode}"`)
+  // console.log(`🧪 Test scan triggered from UI: "${barcode}"`)
   sendLog('info', `Manual scan: "${barcode}"`)
   await handleScan(barcode)
   return { success: true }
@@ -380,7 +381,7 @@ ipcMain.handle('scan:test', async (event, barcode) => {
 ipcMain.handle('scan:cancel', async (event, scanId) => {
   try {
     const result = await cancelScan(scanId)
-    console.log(`✅ ยกเลิก scan #${scanId} สำเร็จ`)
+    // console.log(`✅ ยกเลิก scan #${scanId} สำเร็จ`)
     return { success: true, data: result.data }
   } catch (error) {
     console.error('❌ ยกเลิก scan ล้มเหลว:', error.response?.data || error.message)
@@ -557,15 +558,6 @@ function setupAutoUpdater() {
     sendLog('error', 'ตรวจสอบอัพเดทล้มเหลว', err.message)
   })
 }
-
-ipcMain.handle('updater:check', async () => {
-  try {
-    await autoUpdater.checkForUpdates()
-    return { success: true }
-  } catch (err) {
-    return { success: false, message: err.message }
-  }
-})
 
 ipcMain.handle('updater:download', () => {
   autoUpdater.downloadUpdate()

@@ -11,20 +11,11 @@ const store = new Store({
 })
 
 const getToken = () => store.get('token')
-const setToken = (token) => store.set('token', token)
 
 const getStationIds = () => {
   try { return JSON.parse(store.get('stationIds') || '[]') } catch { return [] }
 }
 const setStationIds = (ids) => store.set('stationIds', JSON.stringify(ids))
-
-const getStationId = () => {
-  const ids = getStationIds()
-  return ids.length ? ids[0] : ''
-}
-
-const getBaseUrl = () => store.get('baseUrl')
-const setBaseUrl = (baseUrl) => store.set('baseUrl', baseUrl)
 
 const getScanInputMode = () => store.get('scanInputMode') || 'auto'
 const setScanInputMode = (mode) => store.set('scanInputMode', mode)
@@ -49,12 +40,8 @@ const clearConfig = () => {
 
 module.exports = {
   getToken,
-  setToken,
   getStationIds,
   setStationIds,
-  getStationId,
-  getBaseUrl,
-  setBaseUrl,
   getScanInputMode,
   setScanInputMode,
   getConfig,

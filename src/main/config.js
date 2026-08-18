@@ -10,13 +10,9 @@ const { getConfig: getStoreConfig } = require('./store')
 const envConfig = {
   // API
   apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3000',
-  
+
   // Notification
-  enableSound: process.env.ENABLE_SOUND === 'true',
-  
-  // App
-  nodeEnv: process.env.NODE_ENV || 'development',
-  openDevtools: process.env.OPEN_DEVTOOLS === 'true'
+  enableSound: process.env.ENABLE_SOUND === 'true'
 }
 
 /**
@@ -36,27 +32,6 @@ function isSoundEnabled() {
 }
 
 /**
- * ตรวจสอบว่าอยู่ในโหมด development หรือไม่
- */
-function isDevelopment() {
-  return envConfig.nodeEnv === 'development'
-}
-
-/**
- * ตรวจสอบว่าควรเปิด DevTools หรือไม่
- */
-function shouldOpenDevtools() {
-  return envConfig.openDevtools
-}
-
-/**
- * ดึงค่า config ทั้งหมดจาก env
- */
-function getEnvConfig() {
-  return { ...envConfig }
-}
-
-/**
  * ดึงค่า config ที่รวม store + env
  */
 function getMergedConfig() {
@@ -72,8 +47,5 @@ function getMergedConfig() {
 module.exports = {
   getApiBaseUrl,
   isSoundEnabled,
-  isDevelopment,
-  shouldOpenDevtools,
-  getEnvConfig,
   getMergedConfig
 }

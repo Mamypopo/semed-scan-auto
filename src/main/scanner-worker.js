@@ -150,7 +150,9 @@ const wndProc = koffi.register(function (hwnd, msg, wParam, lParam) {
       if (dwType === RIM_TYPEKEYBOARD) {
         const flags = rawBuf.readUInt16LE(FLAGS_OFF)
         const vk    = rawBuf.readUInt16LE(VKEY_OFF)
-        dbg(`[key] vk=0x${vk.toString(16)} flags=${flags}`)
+        // ปิดไว้: log ทุกคีย์ที่กดทั้งเครื่อง ไม่ใช่แค่ตอนสแกน (Raw Input เห็นหมดไม่ว่าพิมพ์โปรแกรมไหน)
+        // เปิดใช้เฉพาะตอน debug ปัญหาการดักคีย์บอร์ดเท่านั้น
+        // dbg(`[key] vk=0x${vk.toString(16)} flags=${flags}`)
         handleVKey(vk, flags)
       }
     }

@@ -77,11 +77,35 @@
   .progress-fill {
     height: 100%;
     width: 100%;
-    animation: shrink 5s linear forwards;
+    animation: shrink linear forwards;
+    animation-duration: var(--duration, 5s);
   }
   @keyframes shrink {
     from { width: 100%; }
     to   { width: 0%;   }
+  }
+  .close-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(9,9,11,0.06);
+    color: #71717a;
+    font-size: 12px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .close-btn:hover {
+    background: rgba(9,9,11,0.12);
+    color: #09090b;
   }
 
   .success .accent        { background: #22c55e; }
@@ -106,16 +130,20 @@
       <div class="title" id="titleEl"></div>
       <div class="body"  id="bodyEl"></div>
     </div>
-    <div class="progress"><div class="progress-fill"></div></div>
+    <button type="button" class="close-btn" id="closeBtn" title="ปิด">✕</button>
+    <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
   </div>
 </div>
 <script>
   const p = new URLSearchParams(location.search)
-  const type  = p.get('type')  || 'success'
-  const title = p.get('title') || ''
-  const body  = p.get('body')  || ''
+  const type     = p.get('type')     || 'success'
+  const title    = p.get('title')    || ''
+  const body     = p.get('body')     || ''
+  const duration = parseInt(p.get('duration')) || 5000
 
   document.getElementById('card').classList.add(type)
+  document.getElementById('progressFill').style.setProperty('--duration', `${duration}ms`)
+  document.getElementById('closeBtn').addEventListener('click', () => window.close())
 
   const icons = { success: '✅', error: '❌', warning: '🔁' }
   document.getElementById('icon').textContent = icons[type] || '📢'
