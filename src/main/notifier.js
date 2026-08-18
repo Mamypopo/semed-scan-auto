@@ -9,6 +9,7 @@ const HEIGHT   = 100
 const MARGIN   = 16
 const GAP      = 8
 const DURATION = 5000
+const MAX_VISIBLE = 3
 
 const active = []
 
@@ -41,6 +42,12 @@ function remove(entry) {
 }
 
 function showNotification({ type = 'success', title = '', body = '' }) {
+  // เก็บ toast ที่แสดงพร้อมกันไม่เกิน MAX_VISIBLE — ถ้าเกิน ปิดอันเก่าสุดทิ้งทันที
+  // (log panel ในแอปเป็น source of truth ที่ครบอยู่แล้ว toast แค่เตือนสายตาแวบเดียว)
+  while (active.length >= MAX_VISIBLE) {
+    remove(active[0])
+  }
+
   const { x, y } = getBase()
   const posY = y - HEIGHT - active.length * (HEIGHT + GAP)
 
