@@ -40,6 +40,7 @@ function getMergedConfig() {
     ...envConfig,
     token: storeConfig.token,
     stationIds: storeConfig.stationIds || [],
+    cnGroupId: storeConfig.cnGroupId || null,
     baseUrl: storeConfig.baseUrl || envConfig.apiBaseUrl
   }
 }

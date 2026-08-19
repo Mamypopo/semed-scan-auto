@@ -5,10 +5,10 @@ const { fork } = require('child_process')
 const readline = require('readline')
 const { showNotification } = require('./notifier')
 
-const { saveConfig, clearConfig, getStationIds, getScanInputMode } = require('./store')
+const { saveConfig, clearConfig, getStationIds, getCnGroupId, getScanInputMode } = require('./store')
 const { playSound } = require('./sound')
 const { getMergedConfig, isSoundEnabled, getApiBaseUrl } = require('./config')
-const { login, getStations, sendScanData, cancelScan, verifyToken, lookupPatient, getRemarkReasons, createStationRemark, deleteStationRemark } = require('./api')
+const { login, getStations, getCNGroups, sendScanData, cancelScan, verifyToken, lookupPatient, getRemarkReasons, createStationRemark, deleteStationRemark } = require('./api')
 
 let mainWindow
 let scannerWorker
@@ -232,9 +232,23 @@ async function handleScan(barcode) {
     return
   }
 
+  const cnGroupId = getCnGroupId()
+  if (!cnGroupId) {
+    showNotification({ type: 'error', title: '⚠️ ไม่มี CNGroup', body: 'กรุณาเลือก CNGroup ก่อนสแกน' })
+    if (isSoundEnabled()) playSound('error')
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('scan:error', {
+        success: false,
+        error: 'กรุณาเลือก CNGroup ก่อนสแกน',
+        timestamp: new Date().toISOString()
+      })
+    }
+    return
+  }
+
   // console.log(`🔄 สแกน: cn="${cn}" → ${stationIds.length} จุดตรวจ`) // ปิดไว้: มี cn ผู้ป่วย
   const results = await Promise.allSettled(
-    stationIds.map(id => sendScanData(cn, id))
+    stationIds.map(id => sendScanData(cn, id, cnGroupId))
   )
 
   const fulfilled = results.filter(r => r.status === 'fulfilled')
@@ -458,6 +472,18 @@ ipcMain.handle('stations:get', async (event, search) => {
   } catch (error) {
     const status = error.response?.status
     sendLog('error', `โหลดจุดตรวจล้มเหลว${status ? ` (${status})` : ''}`, error.response?.data?.message || error.message)
+    return { success: false, message: error.message }
+  }
+})
+
+ipcMain.handle('cngroups:get', async (event, search) => {
+  try {
+    const result = await getCNGroups(search)
+    sendLog('info', `โหลด CNGroup: ${result.data?.length || 0} รายการ`)
+    return JSON.parse(JSON.stringify(result))
+  } catch (error) {
+    const status = error.response?.status
+    sendLog('error', `โหลด CNGroup ล้มเหลว${status ? ` (${status})` : ''}`, error.response?.data?.message || error.message)
     return { success: false, message: error.message }
   }
 })

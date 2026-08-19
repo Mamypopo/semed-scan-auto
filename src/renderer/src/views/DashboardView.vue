@@ -1,6 +1,94 @@
 <template>
   <div class="space-y-3 pb-6">
 
+    <!-- CNGroup bar -->
+    <div class="flex items-center gap-2">
+      <div class="flex-1 flex flex-wrap gap-1.5 min-h-[28px] items-center">
+        <template v-if="authStore.selectedCNGroup && !showCNGroupSelect">
+          <span class="badge-primary">
+            <span class="w-1.5 h-1.5 rounded-full" style="background:#22c55e;"></span>
+            {{ cnGroupName(authStore.selectedCNGroup) }}
+          </span>
+        </template>
+        <span v-else-if="!showCNGroupSelect" class="text-xs text-zinc-400">ยังไม่ได้เลือก CNGroup</span>
+      </div>
+
+      <button
+        @click="toggleCNGroupPanel"
+        class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all"
+        :class="showCNGroupSelect ? 'text-emerald-700' : 'bg-white text-zinc-500 hover:text-zinc-800'"
+        :style="showCNGroupSelect
+          ? 'background:#ecfdf5; border:1px solid #a7f3d0;'
+          : 'border:1px solid rgba(9,9,11,0.08); box-shadow:0 1px 2px rgba(9,9,11,0.04);'"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8zm6 3c0-1.1-.9-2-2-2M3 15c0-1.1.9-2 2-2"/>
+        </svg>
+        CNGroup
+        <span v-if="authStore.selectedCNGroup"
+          class="w-4 h-4 rounded-full text-white text-[9px] flex items-center justify-center font-bold"
+          style="background:#22c55e;">
+          ✓
+        </span>
+      </button>
+    </div>
+
+    <!-- CNGroup select panel -->
+    <div v-if="showCNGroupSelect" class="card animate-in">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-sm font-semibold text-[#09090b]">เลือก CNGroup</p>
+        <span class="text-xs text-zinc-400">{{ authStore.selectedCNGroup ? cnGroupName(authStore.selectedCNGroup) : '' }}</span>
+      </div>
+
+      <div class="relative mb-2">
+        <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400 pointer-events-none"
+          fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input
+          v-model="cnGroupSearch"
+          type="text"
+          placeholder="ค้นหา CNGroup..."
+          class="input w-full text-xs py-1.5 pl-8 pr-3"
+          @input="onCNGroupSearch"
+        />
+      </div>
+
+      <div v-if="isLoadingCNGroups" class="flex justify-center py-5">
+        <div class="w-5 h-5 border-2 border-zinc-100 border-t-emerald-500 rounded-full animate-spin"></div>
+      </div>
+      <div v-else-if="cnGroups.length === 0" class="text-center py-5 text-zinc-400 text-xs">ไม่พบ CNGroup</div>
+      <div v-else class="space-y-0.5 max-h-52 overflow-y-auto -mx-1 px-1">
+        <div
+          v-for="group in cnGroups" :key="group.id"
+          @click="selectCNGroup(group)"
+          class="flex items-center gap-3 px-3 py-2 rounded-xl cursor-pointer transition-all select-none"
+          :class="authStore.selectedCNGroup?.id === group.id
+            ? 'text-[#09090b]'
+            : 'hover:bg-zinc-50 text-zinc-600 hover:text-zinc-900'"
+          :style="authStore.selectedCNGroup?.id === group.id ? 'background:#ecfdf5;' : ''"
+        >
+          <div class="w-4 h-4 rounded-full shrink-0 transition-all box-border"
+            :class="authStore.selectedCNGroup?.id === group.id ? '' : 'border-2 border-zinc-300'"
+            :style="authStore.selectedCNGroup?.id === group.id ? 'border:5px solid #10b981; background:#fff;' : ''">
+          </div>
+          <p class="flex-1 text-sm truncate">{{ group.name }}</p>
+          <span v-if="group.code" class="shrink-0 px-2 py-0.5 rounded-md text-xs font-bold bg-zinc-100 text-zinc-400 border border-zinc-200">{{ group.code }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Warning: no cngroup -->
+    <div v-if="!showCNGroupSelect && !authStore.hasCNGroup"
+      class="flex items-center gap-2 px-3 py-2 rounded-xl"
+      style="background:#fffbeb; border:1px solid #fde68a;">
+      <svg class="w-3.5 h-3.5 shrink-0" style="color:#FFAB00;" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+      </svg>
+      <p class="text-xs flex-1" style="color:#92400e;">กรุณาเลือก CNGroup ก่อนสแกน</p>
+      <button @click="toggleCNGroupPanel" class="text-xs font-semibold underline underline-offset-2" style="color:#92400e;">เลือก</button>
+    </div>
+
     <!-- Station bar -->
     <div class="flex items-center gap-2">
       <div class="flex-1 flex flex-wrap gap-1.5 min-h-[28px] items-center">
@@ -490,11 +578,59 @@ const scannerStore = useScannerStore()
 const logStore = useLogStore()
 
 const isReady = computed(() =>
-  authStore.scanInputMode === 'auto' || authStore.hasStations
+  (authStore.scanInputMode === 'auto' || authStore.hasStations) && authStore.hasCNGroup
 )
 
 const showStationSelect = ref(false)
+const showCNGroupSelect = ref(false)
 const showLogs = ref(false)
+
+const cnGroups = ref([])
+const isLoadingCNGroups = ref(false)
+const cnGroupSearch = ref('')
+let cnGroupSearchTimer = null
+
+function cnGroupName(g) {
+  const name = g.name || cnGroups.value.find(c => c.id === g.id)?.name || 'ไม่ทราบชื่อ'
+  const code = g.code || cnGroups.value.find(c => c.id === g.id)?.code
+  return code ? `${name} (${code})` : name
+}
+
+async function loadCNGroups(search = '') {
+  isLoadingCNGroups.value = true
+  try {
+    const result = await window.api.getCNGroups(search)
+    if (result.success) {
+      cnGroups.value = result.data
+      if (authStore.selectedCNGroup && !authStore.selectedCNGroup.name) {
+        const found = result.data.find(g => g.id === authStore.selectedCNGroup.id)
+        if (found) {
+          authStore.selectedCNGroup.name = found.name
+          authStore.selectedCNGroup.code = found.code
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load cngroups:', e)
+  } finally {
+    isLoadingCNGroups.value = false
+  }
+}
+
+function onCNGroupSearch() {
+  clearTimeout(cnGroupSearchTimer)
+  cnGroupSearchTimer = setTimeout(() => loadCNGroups(cnGroupSearch.value), 300)
+}
+
+function toggleCNGroupPanel() {
+  showCNGroupSelect.value = !showCNGroupSelect.value
+  if (showCNGroupSelect.value && cnGroups.value.length === 0) loadCNGroups()
+}
+
+async function selectCNGroup(group) {
+  await authStore.selectCNGroup(group)
+  showCNGroupSelect.value = false
+}
 
 // Remark form
 const remarkForm = reactive({ cn: '', stationId: '', reasonId: '', remark: '' })
@@ -695,6 +831,7 @@ function formatTime(ts, short = false) {
 onMounted(() => {
   scannerStore.setupIPCListeners()
   if (authStore.selectedStations.some(s => !s.name)) loadStations()
+  if (authStore.selectedCNGroup && !authStore.selectedCNGroup.name) loadCNGroups()
 
   window.api.onLog((data) => {
     logStore.add(data.level, data.message, data.detail)

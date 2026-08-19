@@ -49,7 +49,15 @@ contextBridge.exposeInMainWorld('api', {
    * @returns {Promise<Object>} - { success, data: [...] }
    */
   getStations: (search) => ipcRenderer.invoke('stations:get', search),
-  
+
+  // ============ CNGroup APIs ============
+
+  /**
+   * ดึงรายการ CNGroup สำหรับ dropdown
+   * @returns {Promise<Object>} - { success, data: [...] }
+   */
+  getCNGroups: (search) => ipcRenderer.invoke('cngroups:get', search),
+
   // ============ Event Listeners ============
   
   /**

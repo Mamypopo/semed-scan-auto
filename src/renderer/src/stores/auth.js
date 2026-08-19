@@ -17,10 +17,12 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
   const token = ref(null)
   const selectedStations = ref([])
+  const selectedCNGroup = ref(null)
   const isLoading = ref(false)
   const scanInputMode = ref('auto')
   const isAuthenticated = computed(() => !!token.value)
   const hasStations = computed(() => selectedStations.value.length > 0)
+  const hasCNGroup = computed(() => !!selectedCNGroup.value)
 
   function isStationSelected(id) {
     return selectedStations.value.some(s => s.id === id)
@@ -31,6 +33,16 @@ export const useAuthStore = defineStore('auth', () => {
       token: token.value,
       stationIds: selectedStations.value.map(s => s.id)
     })
+  }
+
+  async function selectCNGroup(group) {
+    selectedCNGroup.value = { id: group.id, name: group.name, code: group.code }
+    await window.api.saveConfig({ cnGroupId: group.id })
+  }
+
+  async function clearCNGroup() {
+    selectedCNGroup.value = null
+    await window.api.saveConfig({ cnGroupId: null })
   }
 
   async function toggleScanInputMode() {
@@ -114,6 +126,9 @@ export const useAuthStore = defineStore('auth', () => {
         if (Array.isArray(config.stationIds) && config.stationIds.length > 0) {
           selectedStations.value = config.stationIds.map(id => ({ id, name: '' }))
         }
+        if (config.cnGroupId) {
+          selectedCNGroup.value = { id: config.cnGroupId, name: '' }
+        }
         scanInputMode.value = 'manual'
         await window.api.saveConfig({ scanInputMode: 'manual' })
         return true
@@ -168,6 +183,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     token.value = null
     selectedStations.value = []
+    selectedCNGroup.value = null
 
     Toast.fire({
       icon: 'info',
@@ -179,13 +195,17 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     token,
     selectedStations,
+    selectedCNGroup,
     isLoading,
     scanInputMode,
     isAuthenticated,
     hasStations,
+    hasCNGroup,
     isStationSelected,
     toggleStation,
     clearStations,
+    selectCNGroup,
+    clearCNGroup,
     toggleScanInputMode,
     login,
     loginWithMicrosoft,

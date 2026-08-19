@@ -89,6 +89,20 @@ async function getStations(search = '') {
   }
 }
 
+/**
+ * ดึงรายการ CNGroup ทั้งหมดสำหรับ dropdown
+ * @returns {Promise}
+ */
+async function getCNGroups(search = '') {
+  const params = new URLSearchParams({ isActive: 'true', limit: '100' })
+  if (search) params.set('search', search)
+  const response = await api.get(`/cngroups/dropdown?${params.toString()}`)
+  return {
+    success: true,
+    data: response.data.data || response.data || []
+  }
+}
+
 // ==========================================
 // Scan APIs
 // ==========================================
@@ -97,9 +111,11 @@ async function getStations(search = '') {
  * ส่งข้อมูลบาร์โค้ดไปยังเซิร์ฟเวอร์
  * ใช้ endpoint เดียว ส่ง mode ไปให้ backend จัดการ
  * @param {string} barcode - รหัสบาร์โค้ด (CN หรือ HN)
+ * @param {number|string} stationId
+ * @param {number|string} [cnGroupId] - บังคับ cnGroup ให้ตรง กัน CN ซ้ำข้าม cnGroup แล้วได้ผิดคน
  * @returns {Promise}
  */
-async function sendScanData(barcode, stationId) {
+async function sendScanData(barcode, stationId, cnGroupId) {
   if (!stationId) {
     throw new Error('ไม่ได้ตั้งค่า Station ID')
   }
@@ -109,6 +125,7 @@ async function sendScanData(barcode, stationId) {
     stationId: parseInt(stationId),
     scanType: 'WINAPP'
   }
+  if (cnGroupId) payload.cnGroupId = cnGroupId
 
   // ปิดไว้: payload มี cn (รหัสผู้ป่วย) — เปิดใช้เฉพาะตอน debug
   // console.log(`📡 Sending scan to /scan/checkpoint (station ${stationId}):`, payload)
@@ -158,6 +175,7 @@ module.exports = {
   api,
   login,
   getStations,
+  getCNGroups,
   sendScanData,
   cancelScan,
   verifyToken,
