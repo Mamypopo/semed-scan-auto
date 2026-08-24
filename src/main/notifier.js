@@ -8,7 +8,7 @@ const WIDTH    = 310
 const HEIGHT   = 100
 const MARGIN   = 16
 const GAP      = 8
-const DURATION = 3000
+const DURATION = 1500
 const MAX_VISIBLE = 3
 
 const active = []

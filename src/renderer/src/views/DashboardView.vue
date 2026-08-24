@@ -401,9 +401,9 @@
         <!-- Auto / Manual -->
         <div class="flex gap-0.5 p-1 rounded-xl flex-1 bg-zinc-100">
           <button
-            @click="authStore.scanInputMode !== 'auto' && authStore.toggleScanInputMode()"
-            class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
-            :class="authStore.scanInputMode === 'auto' ? 'bg-white text-[#09090b] shadow-sm' : 'text-zinc-400 hover:text-zinc-600'"
+            disabled
+            title="ปิดใช้งานชั่วคราว: auto mode"
+            class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 opacity-40 cursor-not-allowed text-zinc-400"
           >
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
