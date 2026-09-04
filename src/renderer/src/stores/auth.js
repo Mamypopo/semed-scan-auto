@@ -18,11 +18,14 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref(null)
   const selectedStations = ref([])
   const selectedCNGroup = ref(null)
+  const workflowMode = ref(null) // 'checkpoint' | 'recheck'
   const isLoading = ref(false)
   const scanInputMode = ref('auto')
   const isAuthenticated = computed(() => !!token.value)
   const hasStations = computed(() => selectedStations.value.length > 0)
   const hasCNGroup = computed(() => !!selectedCNGroup.value)
+  const hasWorkflowMode = computed(() => !!workflowMode.value)
+  const isRecheckMode = computed(() => workflowMode.value === 'recheck')
 
   function isStationSelected(id) {
     return selectedStations.value.some(s => s.id === id)
@@ -43,6 +46,24 @@ export const useAuthStore = defineStore('auth', () => {
   async function clearCNGroup() {
     selectedCNGroup.value = null
     await window.api.saveConfig({ cnGroupId: null })
+  }
+
+  /**
+   * เลือก/สลับโหมดการทำงาน (checkpoint ↔ recheck)
+   * เคลียร์ Station + CNGroup ที่เลือกไว้เสมอ กัน config ของโหมดเก่าหลุดข้ามมาใช้ผิด
+   */
+  async function selectWorkflowMode(mode) {
+    workflowMode.value = mode
+    selectedStations.value = []
+    selectedCNGroup.value = null
+    await window.api.saveConfig({ workflowMode: mode, stationIds: [], cnGroupId: null })
+  }
+
+  async function resetWorkflowMode() {
+    workflowMode.value = null
+    selectedStations.value = []
+    selectedCNGroup.value = null
+    await window.api.saveConfig({ workflowMode: null, stationIds: [], cnGroupId: null })
   }
 
   async function toggleScanInputMode() {
@@ -129,6 +150,9 @@ export const useAuthStore = defineStore('auth', () => {
         if (config.cnGroupId) {
           selectedCNGroup.value = { id: config.cnGroupId, name: '' }
         }
+        if (config.workflowMode) {
+          workflowMode.value = config.workflowMode
+        }
         scanInputMode.value = 'manual'
         await window.api.saveConfig({ scanInputMode: 'manual' })
         return true
@@ -184,6 +208,7 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     selectedStations.value = []
     selectedCNGroup.value = null
+    workflowMode.value = null
 
     Toast.fire({
       icon: 'info',
@@ -196,16 +221,21 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     selectedStations,
     selectedCNGroup,
+    workflowMode,
     isLoading,
     scanInputMode,
     isAuthenticated,
     hasStations,
     hasCNGroup,
+    hasWorkflowMode,
+    isRecheckMode,
     isStationSelected,
     toggleStation,
     clearStations,
     selectCNGroup,
     clearCNGroup,
+    selectWorkflowMode,
+    resetWorkflowMode,
     toggleScanInputMode,
     login,
     loginWithMicrosoft,

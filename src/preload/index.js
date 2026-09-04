@@ -94,6 +94,35 @@ contextBridge.exposeInMainWorld('api', {
   createStationRemark: (data) => ipcRenderer.invoke('station-remark:create', data),
   deleteStationRemark: (patientCNGroupId, stationId, cnGroupId) => ipcRenderer.invoke('station-remark:delete', { patientCNGroupId, stationId, cnGroupId }),
 
+  // ============ Lab Recheck APIs ============
+
+  /**
+   * สร้าง ScanItem โดย Lab เอง หลังจาก recheck แล้วได้ notFound:true มา และผู้ใช้ยืนยันแล้ว
+   * @returns {Promise<Object>}
+   */
+  recheckLabCreate: (barcode, cnGroupId) => ipcRenderer.invoke('recheck:labCreate', { barcode, cnGroupId }),
+  cancelRecheck: (scanItemId) => ipcRenderer.invoke('recheck:cancel', scanItemId),
+  getRecheckSummary: (cnGroupId) => ipcRenderer.invoke('recheck:summary', cnGroupId),
+
+  /**
+   * รอรับผลตอน recheck สำเร็จ (ทั้ง recheck ปกติ และ lab-create)
+   * @param {Function} callback - fn({ success, isNewRecheck, patientName, data, timestamp })
+   */
+  onRecheckResult: (callback) => {
+    ipcRenderer.on('recheck:result', (_, data) => callback(data))
+  },
+  onRecheckError: (callback) => {
+    ipcRenderer.on('recheck:error', (_, data) => callback(data))
+  },
+  /**
+   * รอรับตอนไม่พบ ScanItem จากหน้างาน — renderer ต้องถามผู้ใช้ก่อนว่าจะสร้างโดย Lab ไหม
+   * แล้วเรียก recheckLabCreate เองถ้ายืนยัน
+   * @param {Function} callback - fn({ barcode, cnGroupId, patient, station, timestamp })
+   */
+  onRecheckNotFound: (callback) => {
+    ipcRenderer.on('recheck:notFound', (_, data) => callback(data))
+  },
+
   onLog: (callback) => {
     ipcRenderer.on('app:log', (_, data) => callback(data))
   },

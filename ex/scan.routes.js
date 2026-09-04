@@ -1,6 +1,7 @@
 import express from "express";
 import { scanController } from "./scan.controller.js";
 import { authenticateToken, requirePermission } from "../middlewares/auth.middleware.js";
+import { requireCNGroupAccess } from "../utils/customer-auth.js";
 import { PERMISSIONS } from "../../constants/permissions.js";
 
 const router = express.Router();
@@ -9,10 +10,10 @@ const router = express.Router();
 router.post("/summary", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getSummary);
 
 // Companies (สำหรับ Company Filter)
-router.get("/companies", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getCompanies);
+router.get("/companies", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), requireCNGroupAccess, scanController.getCompanies);
 
 // Departments (สำหรับ Department Filter)
-router.get("/departments", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getDepartments);
+router.get("/departments", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), requireCNGroupAccess, scanController.getDepartments);
 
 // Dashboard
 router.post("/dashboard", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getDashboard);
@@ -62,6 +63,7 @@ router.get(
 router.get(
   "/customer/:cnGroupId/:stationId/patients",
   authenticateToken,
+  requireCNGroupAccess,
   scanController.getPatientsByStationForCustomer
 );
 
@@ -80,5 +82,12 @@ router.post(
   requirePermission(PERMISSIONS.SCAN_UPDATE),
   scanController.bulkUpdateScanlog
 );
+
+// Recheck
+router.post("/recheck", authenticateToken, requirePermission(PERMISSIONS.SCAN_CREATE), scanController.recheckCheckpoint);
+router.post("/recheck/lab-create", authenticateToken, requirePermission(PERMISSIONS.SCAN_CREATE), scanController.recheckLabCreate);
+router.delete("/recheck/:id", authenticateToken, requirePermission(PERMISSIONS.SCAN_UPDATE), scanController.cancelRecheck);
+router.get("/recheck/summary", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getRecheckSummary);
+router.get("/recheck/station-patients", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getRecheckStationPatients);
 
 export default router;

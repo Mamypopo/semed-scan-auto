@@ -41,6 +41,7 @@ function getMergedConfig() {
     token: storeConfig.token,
     stationIds: storeConfig.stationIds || [],
     cnGroupId: storeConfig.cnGroupId || null,
+    workflowMode: storeConfig.workflowMode || null,
     baseUrl: storeConfig.baseUrl || envConfig.apiBaseUrl
   }
 }

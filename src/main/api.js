@@ -162,6 +162,54 @@ async function deleteStationRemark(patientCNGroupId, stationId, cnGroupId) {
   return response.data
 }
 
+// ==========================================
+// Lab Recheck APIs
+// ==========================================
+// บาร์โค้ดของ Lab ก็เป็น CN.STATION_ID เหมือนกัน แต่ backend จะแยก parse เอง
+// ไม่ต้องเลือกจุดตรวจในแอป — ใช้ station id ที่ฝังมาในบาร์โค้ดโดยตรง
+
+/**
+ * ยิง recheck — ถ้ามี ScanItem จากหน้างานอยู่แล้วจะเปลี่ยน source เป็น RECHECK ให้
+ * ถ้าไม่พบเลย จะได้ notFound:true กลับมา (ไม่ throw) ให้ถามผู้ใช้ก่อนว่าจะสร้างโดย Lab ไหม
+ * @param {string} barcode - รูปแบบ CN.STATION_ID เต็มๆ (ไม่ต้อง parse เอง)
+ * @param {number|string} cnGroupId
+ * @returns {Promise}
+ */
+async function recheckCheckpoint(barcode, cnGroupId) {
+  const response = await api.post('/scan/recheck', { barcode, cnGroupId })
+  return response.data
+}
+
+/**
+ * สร้าง ScanItem ใหม่โดย Lab เอง (source=LAB_CREATED) — ใช้ตอน recheckCheckpoint คืน notFound:true
+ * และผู้ใช้ยืนยันแล้วว่าจะสร้าง
+ * @returns {Promise}
+ */
+async function recheckLabCreate(barcode, cnGroupId) {
+  const response = await api.post('/scan/recheck/lab-create', { barcode, cnGroupId })
+  return response.data
+}
+
+/**
+ * ยกเลิก recheck — RECHECK จะคืนกลับเป็น STATION, LAB_CREATED จะถูกยกเลิกทั้งรายการ
+ * @param {number|string} scanItemId
+ * @returns {Promise}
+ */
+async function cancelRecheck(scanItemId) {
+  const response = await api.delete(`/scan/recheck/${scanItemId}`)
+  return response.data
+}
+
+/**
+ * สรุปยอด recheck ของ CNGroup (ทั้งหมด/รอเช็ค/รับแล้ว แยกตามจุดตรวจ LAB)
+ * @param {number|string} cnGroupId
+ * @returns {Promise}
+ */
+async function getRecheckSummary(cnGroupId) {
+  const response = await api.get(`/scan/recheck/summary?cnGroupId=${cnGroupId}`)
+  return response.data
+}
+
 /**
  * เช็คว่า token ยังใช้งานได้หรือไม่ (เรียก /auth/me)
  * @returns {Promise}
@@ -182,5 +230,9 @@ module.exports = {
   lookupPatient,
   getRemarkReasons,
   createStationRemark,
-  deleteStationRemark
+  deleteStationRemark,
+  recheckCheckpoint,
+  recheckLabCreate,
+  cancelRecheck,
+  getRecheckSummary
 }

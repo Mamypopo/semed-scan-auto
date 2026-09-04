@@ -1,6 +1,42 @@
 <template>
   <div class="space-y-3 pb-6">
 
+    <!-- Workflow mode gate -->
+    <div v-if="!authStore.hasWorkflowMode" class="card text-center py-8">
+      <div class="w-12 h-12 mx-auto mb-3 rounded-2xl flex items-center justify-center" style="background:#eef2ff;">
+        <svg class="w-6 h-6" style="color:#696CFF;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m0 6h4m-4 4h4m-9 1h.01M12 12h.01"/>
+        </svg>
+      </div>
+      <p class="text-sm font-semibold text-[#09090b] mb-1">เลือกโหมดการทำงาน</p>
+      <p class="text-xs text-zinc-400 mb-4">เลือกครั้งเดียว ระบบจะจำไว้ให้เครื่องนี้ (เปลี่ยนภายหลังได้)</p>
+      <div class="flex flex-col gap-2 max-w-xs mx-auto">
+        <button @click="authStore.selectWorkflowMode('checkpoint')"
+          class="py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
+          style="background:#696CFF; box-shadow:0 2px 8px -3px rgba(105,108,255,0.5);">
+          Checkpoint <span class="font-normal opacity-80">(สแกนหน้างาน เช่น X-ray)</span>
+        </button>
+        <button @click="authStore.selectWorkflowMode('recheck')"
+          class="py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
+          style="background:#22c55e; box-shadow:0 2px 8px -3px rgba(34,197,94,0.5);">
+          Lab Recheck
+        </button>
+      </div>
+    </div>
+
+    <template v-else>
+
+    <!-- Mode indicator + switch -->
+    <div class="flex items-center justify-between px-1">
+      <span class="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
+        โหมด:
+        <span :style="authStore.isRecheckMode ? 'color:#15803d;' : 'color:#4338ca;'">
+          {{ authStore.isRecheckMode ? 'Lab Recheck' : 'Checkpoint' }}
+        </span>
+      </span>
+      <button @click="confirmChangeWorkflowMode" class="text-[11px] text-zinc-400 hover:text-zinc-600 underline underline-offset-2">เปลี่ยนโหมด</button>
+    </div>
+
     <!-- CNGroup bar -->
     <div class="flex items-center gap-2">
       <div class="flex-1 flex flex-wrap gap-1.5 min-h-[28px] items-center">
@@ -88,6 +124,8 @@
       <p class="text-xs flex-1" style="color:#92400e;">กรุณาเลือก CNGroup ก่อนสแกน</p>
       <button @click="toggleCNGroupPanel" class="text-xs font-semibold underline underline-offset-2" style="color:#92400e;">เลือก</button>
     </div>
+
+    <template v-if="!authStore.isRecheckMode">
 
     <!-- Station bar -->
     <div class="flex items-center gap-2">
@@ -564,21 +602,248 @@
       </div>
     </div>
 
+    </template>
+    <template v-else>
+
+      <!-- Recheck scan input -->
+      <div class="card">
+        <p class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-2">ยิง Recheck</p>
+        <input
+          ref="recheckInputRef"
+          v-model="recheckBarcode"
+          type="text"
+          class="input w-full text-sm font-mono py-2"
+          placeholder="ยิงบาร์โค้ดแล้วกด Enter... (CN.STATION_ID)"
+          :disabled="!authStore.hasCNGroup || recheckStore.isScanning"
+          autocomplete="off"
+          @keyup.enter="runRecheckScan"
+        />
+        <p v-if="!authStore.hasCNGroup" class="text-[11px] mt-1.5" style="color:#92400e;">กรุณาเลือก CNGroup ก่อน</p>
+      </div>
+
+      <!-- Recheck summary -->
+      <div class="card">
+        <p class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-2">สรุป CNGroup นี้</p>
+        <div v-if="recheckStore.isLoadingSummary" class="grid grid-cols-3 gap-2">
+          <div v-for="n in 3" :key="n" class="h-12 bg-zinc-100 animate-pulse rounded-xl"></div>
+        </div>
+        <div v-else class="grid grid-cols-3 gap-2">
+          <div class="px-3 py-2.5 rounded-xl" style="background:#eef2ff; border:1px solid #c7d2fe;">
+            <p class="text-[10px] font-medium" style="color:#4338ca;">ทั้งหมด</p>
+            <p class="text-lg font-bold" style="color:#4338ca;">{{ recheckStore.summary.totalPatients }}</p>
+          </div>
+          <div class="px-3 py-2.5 rounded-xl" style="background:#fffbeb; border:1px solid #fde68a;">
+            <p class="text-[10px] font-medium" style="color:#92400e;">รอเช็ค</p>
+            <p class="text-lg font-bold" style="color:#92400e;">{{ recheckStore.summary.awaitingReceiveCount }}</p>
+          </div>
+          <div class="px-3 py-2.5 rounded-xl" style="background:#f0fdf4; border:1px solid #bbf7d0;">
+            <p class="text-[10px] font-medium" style="color:#15803d;">Lab รับแล้ว</p>
+            <p class="text-lg font-bold" style="color:#15803d;">{{ recheckStore.summary.receivedCount }}</p>
+          </div>
+        </div>
+        <div v-if="recheckStore.summary.stations?.length" class="mt-2 space-y-1 max-h-40 overflow-y-auto">
+          <div v-for="st in recheckStore.summary.stations" :key="st.stationId"
+            class="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs"
+            style="background:#fafafa; border:1px solid rgba(9,9,11,0.06);">
+            <span class="text-zinc-600 truncate">{{ st.stationName }}</span>
+            <span class="font-semibold shrink-0 ml-2" :style="st.awaitingReceive === 0 ? 'color:#15803d;' : 'color:#92400e;'">
+              {{ st.awaitingReceive === 0 ? 'ครบ' : `รอ ${st.awaitingReceive}` }} / {{ st.total }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recheck history -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest">
+            ประวัติ Recheck
+            <span v-if="recheckStore.history.length" class="normal-case text-zinc-300 ml-0.5">· {{ recheckStore.history.length }}</span>
+          </p>
+          <button v-if="recheckStore.history.length" @click="recheckStore.clearHistory()"
+            class="text-[11px] text-zinc-400 hover:text-zinc-600 transition-colors">ล้าง</button>
+        </div>
+
+        <div v-if="!recheckStore.recentHistory.length" class="text-xs text-zinc-400 py-1">ยังไม่มีการยิงบาร์โค้ด</div>
+        <div v-else class="space-y-1.5 max-h-72 overflow-y-auto">
+          <div v-for="(entry, i) in recheckStore.recentHistory" :key="i"
+            class="flex items-start gap-2 px-2.5 py-2 rounded-xl transition-all"
+            :class="entry.status === 'cancelled' ? 'opacity-50' : ''"
+            style="background:#fafafa; border:1px solid rgba(9,9,11,0.06);">
+            <span class="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold"
+              :style="entry.status === 'ok' ? 'background:#dcfce7;color:#15803d;'
+                : entry.status === 'duplicate' ? 'background:#fef3c7;color:#92400e;'
+                : entry.status === 'cancelled' ? 'background:#f4f4f5;color:#71717a;'
+                : 'background:#fee2e2;color:#b91c1c;'">
+              {{ entry.status === 'ok' ? 'สำเร็จ' : entry.status === 'duplicate' ? 'ซ้ำ' : entry.status === 'cancelled' ? 'ยกเลิก' : 'ผิดพลาด' }}
+            </span>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-medium truncate" :class="entry.status === 'cancelled' ? 'line-through text-zinc-400' : 'text-[#09090b]'">
+                {{ entry.name || entry.barcode || '-' }}
+              </p>
+              <div class="flex items-center gap-1.5 text-[10px] text-zinc-400">
+                <span v-if="entry.barcode" class="font-mono">{{ entry.barcode }}</span>
+                <span v-if="entry.station">· {{ entry.station }}</span>
+                <span>· {{ entry.time }}</span>
+              </div>
+              <p v-if="entry.message && entry.status === 'error'" class="text-[10px] mt-0.5" style="color:#b91c1c;">{{ entry.message }}</p>
+            </div>
+            <button v-if="(entry.status === 'ok' || entry.status === 'duplicate') && entry.scanItemId"
+              @click="handleCancelRecheckEntry(entry)"
+              class="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded"
+              style="color:#ef4444; border:1px solid #fecaca;">ยกเลิก</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log Panel (recheck mode) -->
+      <div class="card">
+        <div class="flex items-center justify-between cursor-pointer select-none" @click="showLogs = !showLogs">
+          <p class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
+            logs
+            <span v-if="logStore.entries.length" class="normal-case font-normal text-zinc-300">· {{ logStore.entries.length }}</span>
+            <span v-if="logStore.errorCount"
+              class="px-1.5 py-0.5 rounded text-[9px] font-bold"
+              style="background:#fff5f5; color:#FF5151; border:1px solid #fecaca;">
+              {{ logStore.errorCount }} err
+            </span>
+          </p>
+          <div class="flex items-center gap-2">
+            <button v-if="logStore.entries.length && showLogs" @click.stop="logStore.clear()"
+              class="text-[11px] text-zinc-400 hover:text-zinc-600 transition-colors">ล้าง</button>
+            <svg class="w-3.5 h-3.5 text-zinc-300 transition-transform duration-200"
+              :class="showLogs ? 'rotate-180' : ''"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </div>
+        </div>
+
+        <div v-if="showLogs" class="mt-2 max-h-52 overflow-y-auto space-y-0">
+          <div v-if="!logStore.entries.length" class="text-xs text-zinc-400 py-0.5">ไม่มี logs</div>
+          <div v-for="entry in logStore.entries" :key="entry.id"
+            class="py-1.5 border-b border-zinc-50 last:border-0">
+            <div class="flex items-start gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full shrink-0 mt-1" :style="logDotColor(entry.level)"></span>
+              <span class="text-[10px] text-zinc-400 shrink-0 tabular-nums font-mono">{{ formatLogTime(entry.time) }}</span>
+              <span class="text-[11px] flex-1 min-w-0 break-all leading-snug" :style="logTextColor(entry.level)">{{ entry.message }}</span>
+            </div>
+            <div v-if="entry.detail"
+              class="ml-3.5 mt-0.5 text-[10px] text-zinc-400 break-all leading-tight font-mono whitespace-pre-wrap">{{ entry.detail }}</div>
+          </div>
+        </div>
+      </div>
+
+    </template>
+
+    </template>
+
   </div>
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, watch, nextTick } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useScannerStore } from '../stores/scanner'
 import { useLogStore } from '../stores/log'
+import { useRecheckStore } from '../stores/recheck'
 
 const authStore = useAuthStore()
 const scannerStore = useScannerStore()
 const logStore = useLogStore()
+const recheckStore = useRecheckStore()
+
+const recheckBarcode = ref('')
+const recheckInputRef = ref(null)
+
+async function runRecheckScan() {
+  if (!recheckBarcode.value || recheckStore.isScanning) return
+  recheckStore.isScanning = true
+  try {
+    await window.api.testScan(recheckBarcode.value)
+  } finally {
+    recheckBarcode.value = ''
+    recheckStore.isScanning = false
+    nextTick(() => recheckInputRef.value?.focus())
+  }
+}
+
+async function handleCancelRecheckEntry(entry) {
+  const { default: Swal } = await import('sweetalert2')
+  const confirm = await Swal.fire({
+    title: 'ยืนยันการยกเลิก recheck',
+    html: `${entry.name || entry.barcode || ''}`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'ยกเลิก recheck',
+    cancelButtonText: 'ปิด',
+    confirmButtonColor: '#FF5151',
+    customClass: { popup: 'swal-app' }
+  })
+  if (!confirm.isConfirmed) return
+
+  const result = await recheckStore.cancelRecheckEntry(entry)
+  if (!result?.success) {
+    Swal.fire({ icon: 'error', title: 'ยกเลิกไม่สำเร็จ', text: result?.message, customClass: { popup: 'swal-app' } })
+  }
+}
+
+async function confirmChangeWorkflowMode() {
+  const { default: Swal } = await import('sweetalert2')
+  const confirm = await Swal.fire({
+    icon: 'warning',
+    title: 'เปลี่ยนโหมดการทำงาน?',
+    text: 'จะล้างจุดตรวจและ CNGroup ที่เลือกไว้ทั้งหมด ต้องเลือกใหม่หลังเปลี่ยน',
+    showCancelButton: true,
+    confirmButtonText: 'เปลี่ยนโหมด',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#696CFF',
+    customClass: { popup: 'swal-app' }
+  })
+  if (confirm.isConfirmed) {
+    await authStore.resetWorkflowMode()
+  }
+}
+
+// ไม่พบ ScanItem จากหน้างาน — ถามยืนยันก่อนว่าจะให้ Lab สร้างเองไหม
+watch(() => recheckStore.pendingNotFound, async (data) => {
+  if (!data) return
+  const { default: Swal } = await import('sweetalert2')
+  const name = data.patient
+    ? `${data.patient.prefix || ''}${data.patient.first_name} ${data.patient.last_name}`
+    : data.barcode
+  const confirm = await Swal.fire({
+    icon: 'warning',
+    title: 'ไม่พบการยิงจากหน้างาน',
+    html: `<b>${name}</b> ยังไม่มี ScanItem ที่จุด <b>${data.station?.name || ''}</b><br>` +
+      `<span style="font-size:0.8em;color:#71717a;">สร้าง ScanItem โดย Lab จะถูกบันทึกว่าสร้างโดย Lab และต้องตรวจสอบย้อนหลัง</span>`,
+    showCancelButton: true,
+    confirmButtonText: 'สร้างโดย Lab',
+    cancelButtonText: 'ยกเลิก',
+    confirmButtonColor: '#FFAB00',
+    customClass: { popup: 'swal-app' }
+  })
+  if (confirm.isConfirmed) {
+    await recheckStore.confirmLabCreate()
+  } else {
+    recheckStore.cancelPendingNotFound()
+  }
+})
+
+// โหลด/รีเซ็ต summary ตอนเปลี่ยน CNGroup (เฉพาะ recheck mode)
+watch(() => authStore.selectedCNGroup?.id, (id) => {
+  if (!authStore.isRecheckMode) return
+  if (id) {
+    recheckStore.loadSummary(id)
+  } else {
+    recheckStore.resetSummary()
+  }
+})
 
 const isReady = computed(() =>
-  (authStore.scanInputMode === 'auto' || authStore.hasStations) && authStore.hasCNGroup
+  authStore.isRecheckMode
+    ? authStore.hasCNGroup
+    : (authStore.scanInputMode === 'auto' || authStore.hasStations) && authStore.hasCNGroup
 )
 
 const showStationSelect = ref(false)
@@ -830,8 +1095,12 @@ function formatTime(ts, short = false) {
 
 onMounted(() => {
   scannerStore.setupIPCListeners()
+  recheckStore.setupIPCListeners()
   if (authStore.selectedStations.some(s => !s.name)) loadStations()
   if (authStore.selectedCNGroup && !authStore.selectedCNGroup.name) loadCNGroups()
+  if (authStore.isRecheckMode && authStore.selectedCNGroup?.id) {
+    recheckStore.loadSummary(authStore.selectedCNGroup.id)
+  }
 
   window.api.onLog((data) => {
     logStore.add(data.level, data.message, data.detail)

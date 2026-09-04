@@ -13,8 +13,12 @@ import {
   getUserScanSummaryToday as getUserScanSummaryTodayService,
   bulkUpdateScanlog as bulkUpdateScanlogService,
   getRegisteringUsers as getRegisteringUsersService,
+  recheckCheckpoint as recheckCheckpointService,
+  recheckLabCreate as recheckLabCreateService,
+  cancelRecheck as cancelRecheckService,
+  getRecheckSummary as getRecheckSummaryService,
+  getRecheckStationPatients as getRecheckStationPatientsService,
 } from "./scan.service.js";
-import { createScanItemLog } from "../Loggers/scanItemLogger.js";
 import { createSystemLog } from "../utils/logger.js";
 import { emitScanAndCustomerDashboardUpdate } from "../socket/socket.service.js";
 
@@ -31,7 +35,7 @@ export const scanController = {
   async scanCheckpoint(req, res, next) {
     try {
       const userId = req.user?.id;
-      const { cn, stationId, cnGroupId, deleteRemark = false, scanType } = req.body;
+      const { cn, stationId, cnGroupId, deleteRemark = false, scanType, doctorVisit = null } = req.body;
 
       if (!cn) {
         return res.status(400).json({
@@ -47,6 +51,7 @@ export const scanController = {
         cnGroupId,
         deleteRemark,
         scanType,
+        doctorVisit,
       });
 
       if (!result.success) {
@@ -55,12 +60,12 @@ export const scanController = {
 
       res.status(200).json(result);
 
-      // สร้าง ScanItem Log
+      // สร้าง System Log
       if (result.scanItem && result.isNewScan) {
-        createScanItemLog({
-          scanItemId: result.scanItem.id,
-          action: "SCAN",
-          details: {
+        createSystemLog(
+          req,
+          "SCAN_CHECKPOINT",
+          {
             cn: result.membership.cn,
             patientName: `${result.patient.prefix || ""} ${
               result.patient.first_name
@@ -69,10 +74,11 @@ export const scanController = {
             scannedAt: result.scanItem.scannedAt,
             wasReinstated: result.wasReinstated || false,
           },
-          userId: userId ? parseInt(userId) : null,
-          hn: result.patient.hn,
-        }).catch((err) => {
-          console.error("Error creating scan item log:", err);
+          null,
+          result.patient.hn,
+          [result.membership.cn],
+        ).catch((err) => {
+          console.error("Error creating system log:", err);
         });
       }
 
@@ -125,21 +131,21 @@ export const scanController = {
 
       res.status(200).json(result);
 
-      // สร้าง ScanItem Log
+      // สร้าง System Log
       if (result.scanItem) {
-        createScanItemLog({
-          scanItemId: result.scanItem.id,
-          action: "CANCEL",
-          details: {
+        createSystemLog(
+          req,
+          "CANCEL_SCAN",
+          {
             cancelledAt: new Date(),
             reason: "ยกเลิกการสแกน",
             patientName: `${result.scanItem.patient.first_name} ${result.scanItem.patient.last_name}`,
             stationName: result.scanItem.station.name,
           },
-          userId: userId ? parseInt(userId) : null,
-          hn: result.scanItem.patient.hn,
-        }).catch((err) => {
-          console.error("Error creating scan item log:", err);
+          null,
+          result.scanItem.patient.hn,
+        ).catch((err) => {
+          console.error("Error creating system log:", err);
         });
       }
 
@@ -778,6 +784,63 @@ export const scanController = {
     } catch (error) {
       console.error("Error in bulkUpdateScanlog controller:", error);
       next(error);
+    }
+  },
+
+  recheckCheckpoint: async (req, res, next) => {
+    try {
+      const { barcode, cnGroupId } = req.body
+      const userId = req.user?.id
+      const userName = req.user?.name
+      const result = await recheckCheckpointService({ barcode, cnGroupId, userId, userName })
+      // notFound ส่ง 200 เพราะ frontend ต้องอ่าน body เพื่อแสดง dialog
+      res.status(result.success || result.notFound ? 200 : 400).json(result)
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  getRecheckSummary: async (req, res, next) => {
+    try {
+      const { cnGroupId, stationId } = req.query
+      if (!cnGroupId) return res.status(400).json({ success: false, message: 'กรุณาระบุ cnGroupId' })
+      const result = await getRecheckSummaryService({ cnGroupId, stationId })
+      res.status(200).json(result)
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  getRecheckStationPatients: async (req, res, next) => {
+    try {
+      const { cnGroupId, stationId, scanStatus, search, page, limit } = req.query
+      if (!cnGroupId || !stationId) return res.status(400).json({ success: false, message: 'กรุณาระบุ cnGroupId และ stationId' })
+      const result = await getRecheckStationPatientsService({ cnGroupId, stationId, scanStatus, search, page, limit })
+      res.status(200).json(result)
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  recheckLabCreate: async (req, res, next) => {
+    try {
+      const { barcode, cnGroupId } = req.body
+      const userId = req.user?.id
+      const result = await recheckLabCreateService({ barcode, cnGroupId, userId })
+      res.status(result.success ? 200 : 400).json(result)
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  cancelRecheck: async (req, res, next) => {
+    try {
+      const { id } = req.params
+      const userId = req.user?.id
+      const result = await cancelRecheckService({ scanItemId: id, userId })
+      res.status(result.success ? 200 : 400).json(result)
+    } catch (error) {
+      next(error)
     }
   },
 };
