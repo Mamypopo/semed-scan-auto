@@ -208,8 +208,10 @@ ipcMain.handle('scan:setPaused', (_, paused) => {
 })
 
 /**
- * Lab Recheck flow — บาร์โค้ดของ Lab ก็เป็น CN.STATION_ID เหมือนกัน แต่ไม่ต้องเลือก
- * จุดตรวจในแอปเลย (station id ฝังมาในบาร์โค้ด backend parse เอง) แค่ต้องมี CNGroup
+ * Lab Recheck flow — บาร์โค้ดของ Lab ก็เป็น CN.STATION_ID เหมือนกัน backend parse เอง
+ * และเช็คความถูกต้องของจุดตรวจให้อยู่แล้ว (isLabStation, patientExaminationItem) จึงไม่บังคับ
+ * เลือกจุดตรวจในแอป แต่ถ้าเลือกไว้ (ไม่บังคับ) จะเช็ค mismatch ก่อนยิง API เป็น safety net เพิ่ม
+ * เหมือน checkpoint manual mode — กันสแกนผิดจุดตรวจแบบ CBC/xray ที่เคยเจอ
  */
 async function handleRecheckScan(barcode) {
   const cnGroupId = getCnGroupId()
@@ -224,6 +226,27 @@ async function handleRecheckScan(barcode) {
       })
     }
     return
+  }
+
+  // ถ้าเลือกจุดตรวจไว้ (ไม่บังคับ) เช็คว่าตรงกับที่ยิงมาไหมก่อนยิง API เลย
+  const stationIds = getStationIds()
+  if (stationIds.length > 0 && barcode.includes('.')) {
+    const parts = barcode.split('.')
+    const embeddedStationId = parseInt(parts[parts.length - 1])
+    if (!isNaN(embeddedStationId) && !stationIds.includes(embeddedStationId)) {
+      const errMsg = `จุดตรวจไม่ตรงกัน: บาร์โค้ดนี้เป็นของจุดตรวจ #${embeddedStationId} แต่ไม่อยู่ในรายการที่เลือก`
+      sendLog('error', `⛔ ${errMsg}`)
+      showNotification({ type: 'error', title: '⛔ จุดตรวจไม่ตรงกัน', body: errMsg })
+      if (isSoundEnabled()) playSound('error')
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('scan:error', {
+          success: false,
+          error: errMsg,
+          timestamp: new Date().toISOString()
+        })
+      }
+      return
+    }
   }
 
   try {

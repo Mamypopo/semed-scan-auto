@@ -125,8 +125,6 @@
       <button @click="toggleCNGroupPanel" class="text-xs font-semibold underline underline-offset-2" style="color:#92400e;">เลือก</button>
     </div>
 
-    <template v-if="!authStore.isRecheckMode">
-
     <!-- Station bar -->
     <div class="flex items-center gap-2">
       <div class="flex-1 flex flex-wrap gap-1.5 min-h-[28px] items-center">
@@ -219,8 +217,8 @@
       </div>
     </div>
 
-    <!-- Warning: no station -->
-    <div v-if="!showStationSelect && !isReady"
+    <!-- Warning: no station (checkpoint mode — บังคับ) -->
+    <div v-if="!authStore.isRecheckMode && !showStationSelect && !isReady"
       class="flex items-center gap-2 px-3 py-2 rounded-xl"
       style="background:#fffbeb; border:1px solid #fde68a;">
       <svg class="w-3.5 h-3.5 shrink-0" style="color:#FFAB00;" fill="currentColor" viewBox="0 0 20 20">
@@ -229,6 +227,19 @@
       <p class="text-xs flex-1" style="color:#92400e;">กรุณาเลือกจุดตรวจก่อนสแกน</p>
       <button @click="toggleStationPanel" class="text-xs font-semibold underline underline-offset-2" style="color:#92400e;">เลือก</button>
     </div>
+
+    <!-- Hint: no station (recheck mode — ไม่บังคับ แค่เตือนเฉยๆ) -->
+    <div v-if="authStore.isRecheckMode && !showStationSelect && !authStore.hasStations"
+      class="flex items-center gap-2 px-3 py-2 rounded-xl"
+      style="background:#fafafa; border:1px solid rgba(9,9,11,0.08);">
+      <svg class="w-3.5 h-3.5 shrink-0 text-zinc-400" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+      </svg>
+      <p class="text-xs flex-1 text-zinc-500">ยังไม่ได้เลือกจุดตรวจ — ไม่บังคับ แต่ช่วยกันสแกนผิดจุดได้ถ้าเลือกไว้</p>
+      <button @click="toggleStationPanel" class="text-xs font-semibold underline underline-offset-2 text-zinc-500">เลือก</button>
+    </div>
+
+    <template v-if="!authStore.isRecheckMode">
 
     <!-- Scanner Status -->
     <div
