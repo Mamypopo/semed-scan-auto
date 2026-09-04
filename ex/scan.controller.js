@@ -14,13 +14,16 @@ import {
   bulkUpdateScanlog as bulkUpdateScanlogService,
   getRegisteringUsers as getRegisteringUsersService,
   recheckCheckpoint as recheckCheckpointService,
-  recheckLabCreate as recheckLabCreateService,
   cancelRecheck as cancelRecheckService,
   getRecheckSummary as getRecheckSummaryService,
   getRecheckStationPatients as getRecheckStationPatientsService,
 } from "./scan.service.js";
+import {
+  getRecheckExceptions as getRecheckExceptionsService,
+  resolveRecheckException as resolveRecheckExceptionService,
+} from "./recheck-exception.service.js";
 import { createSystemLog } from "../utils/logger.js";
-import { emitScanAndCustomerDashboardUpdate } from "../socket/socket.service.js";
+import { emitScanAndCustomerDashboardUpdate, emitRecheckUpdate } from "../socket/socket.service.js";
 
 import {
   getCustomerAllowedCompanies,
@@ -793,8 +796,32 @@ export const scanController = {
       const userId = req.user?.id
       const userName = req.user?.name
       const result = await recheckCheckpointService({ barcode, cnGroupId, userId, userName })
-      // notFound ส่ง 200 เพราะ frontend ต้องอ่าน body เพื่อแสดง dialog
-      res.status(result.success || result.notFound ? 200 : 400).json(result)
+      res.status(result.success ? 200 : 400).json(result)
+
+      if (result.success && result.isNewRecheck) {
+        createSystemLog(
+          req,
+          'RECHECK_CHECKPOINT',
+          {
+            cnGroupId,
+            cn: result.cn,
+            patientName: result.patient ? `${result.patient.prefix || ''}${result.patient.first_name} ${result.patient.last_name}` : null,
+            stationName: result.station?.name,
+            scanItemId: result.scanItemId,
+          },
+          null,
+          result.patient?.hn,
+          result.cn ? [result.cn] : []
+        ).catch((err) => console.error('Error creating system log:', err))
+      }
+
+      // แจ้งหน้า Recheck ที่เปิดอยู่เสมอ ไม่ว่าจะ recheck สำเร็จ (STATION→RECHECK) หรือ reject แล้ว
+      // อาจเพิ่งสร้าง/อัปเดต RecheckException ไว้ (CN_NOT_FOUND/SCAN_NOT_FOUND) — ทั้งคู่กระทบตัวเลข
+      // ในหน้านี้ ไม่กระทบ scan dashboard หลัก (isCancelled) เลยไม่ต้อง emit scan-dashboard-update คู่
+      if (cnGroupId) {
+        const io = req.app.get('io')
+        if (io) emitRecheckUpdate(io, cnGroupId)
+      }
     } catch (error) {
       next(error)
     }
@@ -822,23 +849,66 @@ export const scanController = {
     }
   },
 
-  recheckLabCreate: async (req, res, next) => {
-    try {
-      const { barcode, cnGroupId } = req.body
-      const userId = req.user?.id
-      const result = await recheckLabCreateService({ barcode, cnGroupId, userId })
-      res.status(result.success ? 200 : 400).json(result)
-    } catch (error) {
-      next(error)
-    }
-  },
-
   cancelRecheck: async (req, res, next) => {
     try {
       const { id } = req.params
       const userId = req.user?.id
       const result = await cancelRecheckService({ scanItemId: id, userId })
       res.status(result.success ? 200 : 400).json(result)
+
+      if (result.success) {
+        createSystemLog(
+          req,
+          'RECHECK_CANCEL',
+          {
+            cn: result.cn,
+            patientName: result.patient ? `${result.patient.prefix || ''}${result.patient.first_name} ${result.patient.last_name}` : null,
+            stationName: result.station?.name,
+            scanItemId: id,
+          },
+          null,
+          result.patient?.hn,
+          result.cn ? [result.cn] : []
+        ).catch((err) => console.error('Error creating system log:', err))
+
+        // แค่คืนกลับเป็น STATION ยังมี ScanItem อยู่เหมือนเดิม ไม่กระทบ dashboard หลัก
+        const io = req.app.get('io')
+        if (io && result.cnGroupId) emitRecheckUpdate(io, result.cnGroupId)
+      }
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  getRecheckExceptions: async (req, res, next) => {
+    try {
+      const { cnGroupId, status, page, limit } = req.query
+      if (!cnGroupId) return res.status(400).json({ success: false, message: 'กรุณาระบุ cnGroupId' })
+      const result = await getRecheckExceptionsService({ cnGroupId, status, page, limit })
+      res.status(200).json(result)
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  resolveRecheckException: async (req, res, next) => {
+    try {
+      const { id } = req.params
+      const { status, resolutionNote } = req.body
+      const userId = req.user?.id
+      const result = await resolveRecheckExceptionService({ id, status, resolutionNote, userId })
+      res.status(result.success ? 200 : 400).json(result)
+
+      if (result.success) {
+        createSystemLog(
+          req,
+          'RECHECK_EXCEPTION_RESOLVE',
+          { exceptionId: id, status, resolutionNote: resolutionNote || null },
+          null,
+          null,
+          []
+        ).catch((err) => console.error('Error creating system log:', err))
+      }
     } catch (error) {
       next(error)
     }

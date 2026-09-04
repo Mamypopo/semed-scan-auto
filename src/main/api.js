@@ -170,7 +170,8 @@ async function deleteStationRemark(patientCNGroupId, stationId, cnGroupId) {
 
 /**
  * ยิง recheck — ถ้ามี ScanItem จากหน้างานอยู่แล้วจะเปลี่ยน source เป็น RECHECK ให้
- * ถ้าไม่พบเลย จะได้ notFound:true กลับมา (ไม่ throw) ให้ถามผู้ใช้ก่อนว่าจะสร้างโดย Lab ไหม
+ * ถ้าไม่ผ่าน (CN ไม่เจอ/ไม่ใช่จุดตรวจ LAB/ไม่พบ ScanItem จากหน้างาน) จะ throw เสมอ (400)
+ * backend บันทึกเป็น RecheckException ให้เองอัตโนมัติ ไม่ต้องสร้างเองจากฝั่งนี้แล้ว
  * @param {string} barcode - รูปแบบ CN.STATION_ID เต็มๆ (ไม่ต้อง parse เอง)
  * @param {number|string} cnGroupId
  * @returns {Promise}
@@ -181,17 +182,7 @@ async function recheckCheckpoint(barcode, cnGroupId) {
 }
 
 /**
- * สร้าง ScanItem ใหม่โดย Lab เอง (source=LAB_CREATED) — ใช้ตอน recheckCheckpoint คืน notFound:true
- * และผู้ใช้ยืนยันแล้วว่าจะสร้าง
- * @returns {Promise}
- */
-async function recheckLabCreate(barcode, cnGroupId) {
-  const response = await api.post('/scan/recheck/lab-create', { barcode, cnGroupId })
-  return response.data
-}
-
-/**
- * ยกเลิก recheck — RECHECK จะคืนกลับเป็น STATION, LAB_CREATED จะถูกยกเลิกทั้งรายการ
+ * ยกเลิก recheck — คืนกลับเป็น STATION (ทางเดียว ไม่มี LAB_CREATED แล้ว)
  * @param {number|string} scanItemId
  * @returns {Promise}
  */
@@ -232,7 +223,6 @@ module.exports = {
   createStationRemark,
   deleteStationRemark,
   recheckCheckpoint,
-  recheckLabCreate,
   cancelRecheck,
   getRecheckSummary
 }

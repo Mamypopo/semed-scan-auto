@@ -189,8 +189,6 @@
                     'inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold',
                     entry.status === 'ok'
                       ? 'bg-brand-success-light text-ui-text-brand-success border border-brand-success/20'
-                      : entry.status === 'lab_created'
-                      ? 'bg-brand-warning-light text-ui-text-brand-warning border border-brand-warning/20'
                       : entry.status === 'duplicate'
                       ? 'bg-brand-accent-light text-ui-text-brand-accent border border-brand-accent/20'
                       : entry.status === 'cancelled'
@@ -199,13 +197,11 @@
                   ]">
                     <div class="w-1.5 h-1.5 rounded-full" :class="{
                       'bg-brand-success': entry.status === 'ok',
-                      'bg-brand-warning': entry.status === 'lab_created',
                       'bg-brand-accent': entry.status === 'duplicate',
                       'bg-ui-text-tertiary': entry.status === 'cancelled',
                       'bg-brand-error': entry.status === 'error',
                     }" />
                     {{ entry.status === 'ok' ? 'สำเร็จ'
-                      : entry.status === 'lab_created' ? 'LAB สร้าง'
                       : entry.status === 'duplicate' ? 'ซ้ำ'
                       : entry.status === 'cancelled' ? 'ยกเลิก'
                       : 'ผิดพลาด' }}
@@ -225,7 +221,7 @@
                 <div class="flex flex-col items-end gap-1 flex-shrink-0">
                   <span class="text-xs text-ui-text-tertiary">{{ entry.time }}</span>
                   <button
-                    v-if="entry.status === 'ok' || entry.status === 'lab_created' || entry.status === 'duplicate'"
+                    v-if="entry.status === 'ok' || entry.status === 'duplicate'"
                     @click="cancelRecheck(entry)"
                     class="text-[10px] font-semibold px-2 py-0.5 rounded border border-brand-error/30 text-ui-text-brand-error bg-brand-error-light hover:bg-brand-error hover:text-white transition-all focus:outline-none"
                   >ยกเลิก</button>
@@ -241,23 +237,66 @@
 
         <!-- Stat Cards (compact — same as scan views) -->
         <template v-if="isLoadingSummary">
-          <div class="grid grid-cols-3 gap-2">
-            <div v-for="n in 3" :key="n" class="h-12 bg-ui-bg-tertiary animate-pulse rounded-lg" />
+          <div class="grid grid-cols-4 gap-2">
+            <div v-for="n in 4" :key="n" class="h-12 bg-ui-bg-tertiary animate-pulse rounded-lg" />
           </div>
         </template>
-        <div v-else class="grid grid-cols-3 gap-2">
-          <div class="flex items-center justify-between px-3 py-2.5 bg-brand-secondary-light border border-brand-secondary/20 rounded-lg shadow-sm">
+        <div v-else class="grid grid-cols-4 gap-2">
+          <div
+            :class="['flex flex-col gap-0.5 px-3 py-2 bg-brand-secondary-light border rounded-lg transition-all',
+              isKeyUpdated('total') ? 'animate-pulse-update ring-2 ring-brand-secondary shadow-md scale-105 border-brand-secondary' : 'border-brand-secondary/20 shadow-sm']"
+          >
             <span class="text-xs font-medium text-ui-text-brand-secondary">ทั้งหมด</span>
-            <span class="text-lg font-bold text-ui-text-brand-secondary">{{ summary.totalPatients }}</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-lg font-bold text-ui-text-brand-secondary">{{ summary.totalSamples }}</span>
+              <span class="text-[10px] text-ui-text-brand-secondary/70">ตัวอย่าง</span>
+            </div>
+            <div class="flex items-baseline gap-1">
+              <span class="text-sm font-bold text-ui-text-brand-secondary">{{ summary.totalPatients }}</span>
+              <span class="text-[10px] text-ui-text-brand-secondary/70">คน</span>
+            </div>
           </div>
-          <div class="flex items-center justify-between px-3 py-2.5 bg-brand-warning-light border border-brand-warning/20 rounded-lg shadow-sm">
+          <div
+            :class="['flex flex-col gap-0.5 px-3 py-2 bg-brand-warning-light border rounded-lg transition-all',
+              isKeyUpdated('awaiting') ? 'animate-pulse-update ring-2 ring-brand-warning shadow-md scale-105 border-brand-warning' : 'border-brand-warning/20 shadow-sm']"
+          >
             <span class="text-xs font-medium text-ui-text-brand-warning">รอเช็ค</span>
-            <span class="text-lg font-bold text-ui-text-brand-warning">{{ summary.awaitingReceiveCount }}</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-lg font-bold text-ui-text-brand-warning">{{ summary.awaitingReceiveCount }}</span>
+              <span class="text-[10px] text-ui-text-brand-warning/70">ตัวอย่าง</span>
+            </div>
+            <div class="flex items-baseline gap-1">
+              <span class="text-sm font-bold text-ui-text-brand-warning">{{ summary.awaitingReceivePatientCount }}</span>
+              <span class="text-[10px] text-ui-text-brand-warning/70">คน</span>
+            </div>
           </div>
-          <div class="flex items-center justify-between px-3 py-2.5 bg-brand-success-light border border-brand-success/20 rounded-lg shadow-sm">
+          <div
+            :class="['flex flex-col gap-0.5 px-3 py-2 bg-brand-success-light border rounded-lg transition-all',
+              isKeyUpdated('received') ? 'animate-pulse-update ring-2 ring-brand-success shadow-md scale-105 border-brand-success' : 'border-brand-success/20 shadow-sm']"
+          >
             <span class="text-xs font-medium text-ui-text-brand-success">Lab รับแล้ว</span>
-            <span class="text-lg font-bold text-ui-text-brand-success">{{ summary.receivedCount }}</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-lg font-bold text-ui-text-brand-success">{{ summary.receivedCount }}</span>
+              <span class="text-[10px] text-ui-text-brand-success/70">ตัวอย่าง</span>
+            </div>
+            <div class="flex items-baseline gap-1">
+              <span class="text-sm font-bold text-ui-text-brand-success">{{ summary.receivedPatientCount }}</span>
+              <span class="text-[10px] text-ui-text-brand-success/70">คน</span>
+            </div>
           </div>
+          <button
+            type="button"
+            @click="openExceptionsModal"
+            :class="['flex flex-col gap-0.5 px-3 py-2 bg-brand-error-light border rounded-lg text-left hover:shadow-md transition-all focus:outline-none',
+              isKeyUpdated('exceptions') ? 'animate-pulse-update ring-2 ring-brand-error shadow-md scale-105 border-brand-error' : 'border-brand-error/20 shadow-sm']"
+          >
+            <span class="text-xs font-medium text-ui-text-brand-error">รอตรวจสอบ</span>
+            <div class="flex items-baseline gap-1">
+              <span class="text-lg font-bold text-ui-text-brand-error">{{ exceptionPendingCount }}</span>
+              <span class="text-[10px] text-ui-text-brand-error/70">รายการ</span>
+            </div>
+            <span class="text-[10px] text-ui-text-brand-error/70">กดดูรายละเอียด</span>
+          </button>
         </div>
 
         <!-- Station Cards -->
@@ -268,8 +307,10 @@
           <button
             v-for="st in summary.stations" :key="st.stationId"
             @click="openDrilldown(st)"
-            class="bg-white rounded-lg border shadow-sm hover:shadow-md transition-all text-left focus:outline-none"
-            :class="st.awaitingReceive === 0 ? 'border-brand-success/30 hover:border-brand-success/60' : 'border-ui-border-default hover:border-brand-primary/30'"
+            class="bg-white rounded-lg border text-left focus:outline-none transition-all"
+            :class="isKeyUpdated(`station-${st.stationId}`)
+              ? 'animate-pulse-update ring-2 ring-brand-primary shadow-md scale-105 border-brand-primary'
+              : (st.awaitingReceive === 0 ? 'border-brand-success/30 hover:border-brand-success/60 shadow-sm hover:shadow-md' : 'border-ui-border-default hover:border-brand-primary/30 shadow-sm hover:shadow-md')"
           >
             <div class="px-3 py-2.5">
               <div class="flex items-center justify-between gap-2 mb-1.5">
@@ -297,51 +338,6 @@
 
       </div>
     </div>
-
-    <!-- CONFIRM LAB_CREATED DIALOG -->
-    <TransitionRoot appear :show="!!confirmDialog" as="template">
-      <HeadlessDialog as="div" class="relative z-50" @close="confirmDialog = null; focusInput()">
-        <TransitionChild as="template" enter="ease-out duration-200" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-150" leave-from="opacity-100" leave-to="opacity-0">
-          <div class="fixed inset-0 bg-black/40" />
-        </TransitionChild>
-        <div class="fixed inset-0 flex items-center justify-center p-4">
-          <TransitionChild as="template" enter="ease-out duration-200" enter-from="opacity-0 scale-95" enter-to="opacity-100 scale-100" leave="ease-in duration-150" leave-from="opacity-100 scale-100" leave-to="opacity-0 scale-95">
-            <DialogPanel class="bg-white rounded-xl shadow-2xl w-full max-w-sm">
-              <div class="px-5 py-4 border-b border-ui-border-default">
-                <div class="flex items-center gap-3">
-                  <div class="w-8 h-8 rounded-lg bg-brand-warning-light flex items-center justify-center flex-shrink-0">
-                    <AlertCircle class="w-4 h-4 text-brand-warning" />
-                  </div>
-                  <DialogTitle class="text-base font-semibold text-ui-text-primary">ไม่พบการยิงจากหน้างาน</DialogTitle>
-                </div>
-              </div>
-              <div class="px-5 py-4 space-y-2">
-                <p class="text-sm text-ui-text-secondary">
-                  <span class="font-semibold text-ui-text-primary">{{ confirmDialog?.name }}</span>
-                  ยังไม่มี ScanItem ที่จุด
-                  <span class="font-semibold text-ui-text-primary">{{ confirmDialog?.stationName }}</span>
-                </p>
-                <p class="text-xs text-ui-text-tertiary">สร้าง ScanItem โดย Lab จะถูกบันทึกว่าสร้างโดย Lab และต้องตรวจสอบย้อนหลัง</p>
-              </div>
-              <div class="px-5 py-3 border-t border-ui-border-default flex gap-2 justify-end">
-                <button
-                  @click="confirmDialog = null; focusInput()"
-                  class="inline-flex items-center px-4 py-2 text-sm font-semibold border border-ui-border-default rounded-lg bg-white text-ui-text-primary hover:bg-ui-bg-secondary transition-all shadow-sm hover:shadow-md active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-primary-light"
-                >ยกเลิก</button>
-                <button
-                  @click="confirmLabCreate"
-                  :disabled="isScanning"
-                  class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-brand-warning text-white hover:opacity-90 transition-opacity disabled:opacity-60 shadow-sm active:scale-95 focus:outline-none"
-                >
-                  <CheckCircle class="w-4 h-4" />
-                  สร้างโดย Lab
-                </button>
-              </div>
-            </DialogPanel>
-          </TransitionChild>
-        </div>
-      </HeadlessDialog>
-    </TransitionRoot>
 
     <!-- DRILLDOWN MODAL -->
     <TransitionRoot appear :show="!!drilldown" as="template">
@@ -460,7 +456,7 @@
                                   : 'bg-brand-warning-light text-ui-text-brand-warning border border-brand-warning/20'
                               ]">
                                 <div :class="['w-1.5 h-1.5 rounded-full', p.status === 'received' ? 'bg-brand-success' : 'bg-brand-warning']" />
-                                {{ p.status === 'received' ? (p.source === 'LAB_CREATED' ? 'LAB สร้าง' : 'Lab รับแล้ว') : 'รอเช็ค' }}
+                                {{ p.status === 'received' ? 'Lab รับแล้ว' : 'รอเช็ค' }}
                               </span>
                             </td>
                           </tr>
@@ -505,6 +501,86 @@
       </HeadlessDialog>
     </TransitionRoot>
 
+    <!-- EXCEPTIONS MODAL -->
+    <TransitionRoot appear :show="showExceptionsModal" as="template">
+      <HeadlessDialog as="div" class="relative z-50" @close="closeExceptionsModal">
+        <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
+          <div class="fixed inset-0 bg-black/30 transition-opacity" />
+        </TransitionChild>
+        <div class="fixed inset-0 overflow-y-auto">
+          <div class="flex min-h-full items-center justify-center p-4">
+            <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0 scale-95" enter-to="opacity-100 scale-100" leave="ease-in duration-200" leave-from="opacity-100 scale-100" leave-to="opacity-0 scale-95">
+              <DialogPanel class="w-full max-w-2xl max-h-[85vh] transform rounded-2xl bg-white shadow-xl border border-ui-border-default flex flex-col overflow-hidden">
+                <div class="px-6 pt-5 pb-4 border-b border-ui-border-default flex-shrink-0">
+                  <div class="flex items-center justify-between mb-3">
+                    <DialogTitle class="text-lg font-bold text-ui-text-brand-error">รายการผิดปกติ — รอตรวจสอบ</DialogTitle>
+                    <button @click="closeExceptionsModal" class="text-ui-text-tertiary hover:text-ui-text-brand-error bg-ui-bg-secondary hover:bg-brand-error-light rounded-lg p-1.5 transition-all">
+                      <X class="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div class="inline-flex bg-ui-bg-secondary border border-ui-border-default rounded-lg p-0.5">
+                    <button
+                      v-for="opt in exceptionStatusOptions" :key="opt.value"
+                      @click="exceptionStatusFilter = opt.value"
+                      :class="['px-3 py-1.5 text-xs font-semibold rounded-md transition-all',
+                        exceptionStatusFilter === opt.value ? 'bg-brand-primary text-white shadow-sm' : 'text-ui-text-secondary hover:text-ui-text-primary']"
+                    >{{ opt.label }}</button>
+                  </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto min-h-0 p-4">
+                  <div v-if="exceptionsLoading" class="space-y-2">
+                    <div v-for="n in 4" :key="n" class="h-16 bg-ui-bg-tertiary animate-pulse rounded-lg" />
+                  </div>
+                  <div v-else-if="exceptions.length === 0" class="py-10 flex flex-col items-center text-center">
+                    <div class="w-10 h-10 bg-brand-success-light rounded-lg flex items-center justify-center mx-auto mb-3">
+                      <CheckCircle class="w-5 h-5 text-ui-text-brand-success" />
+                    </div>
+                    <p class="text-sm font-semibold text-ui-text-primary">ไม่มีรายการในสถานะนี้</p>
+                  </div>
+                  <div v-else class="space-y-2">
+                    <div
+                      v-for="ex in exceptions" :key="ex.id"
+                      class="border border-ui-border-default rounded-lg p-3"
+                    >
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                          <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-mono text-xs font-semibold text-ui-text-primary">{{ ex.barcode }}</span>
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-error-light text-ui-text-brand-error border border-brand-error/20">
+                              {{ ex.reason === 'CN_NOT_FOUND' ? 'ไม่พบ CN' : 'ไม่พบการยิงจากหน้างาน' }}
+                            </span>
+                          </div>
+                          <p class="text-xs text-ui-text-secondary mt-1">{{ ex.message }}</p>
+                          <p class="text-[11px] text-ui-text-tertiary mt-1">
+                            {{ ex.station?.name || '-' }} · ยิงโดย {{ ex.scannedByUser?.name || '-' }} · {{ formatDate(ex.scannedAt) }}
+                          </p>
+                          <p v-if="ex.status !== 'PENDING'" class="text-[11px] text-ui-text-tertiary mt-1">
+                            {{ ex.status === 'RESOLVED' ? 'แก้ไขแล้ว' : 'ไม่ใช่ปัญหา' }}โดย {{ ex.resolvedByUser?.name || '-' }}
+                            <span v-if="ex.resolutionNote"> — {{ ex.resolutionNote }}</span>
+                          </p>
+                        </div>
+                        <div v-if="ex.status === 'PENDING'" class="flex flex-col gap-1.5 flex-shrink-0">
+                          <button
+                            @click="resolveException(ex, 'RESOLVED')"
+                            class="text-[11px] font-semibold px-2.5 py-1 rounded border border-brand-success/30 text-ui-text-brand-success bg-brand-success-light hover:bg-brand-success hover:text-white transition-all focus:outline-none"
+                          >แก้ไขแล้ว</button>
+                          <button
+                            @click="resolveException(ex, 'DISMISSED')"
+                            class="text-[11px] font-semibold px-2.5 py-1 rounded border border-ui-border-default text-ui-text-tertiary bg-white hover:bg-ui-bg-secondary transition-all focus:outline-none"
+                          >ไม่ใช่ปัญหา</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </DialogPanel>
+            </TransitionChild>
+          </div>
+        </div>
+      </HeadlessDialog>
+    </TransitionRoot>
+
   </div>
 </template>
 
@@ -517,13 +593,14 @@ import {
 import VueDatePicker from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 import {
-  FlaskConical, ScanLine, CheckCircle, AlertCircle, X, Download,
+  FlaskConical, ScanLine, CheckCircle, X, Download,
   Clock as ClockIcon, ChevronDown, ChevronLeft, ChevronRight, Search as SearchIcon,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import recheckScanService from '@/services/recheckScan.service.js'
 import cnGroupService from '@/services/cngroup'
 import { exportRecheck } from '@/services/excel.js'
+import { subscribeToRecheckUpdate } from '@/services/socket.service.js'
 import Swal from 'sweetalert2'
 
 export default {
@@ -532,7 +609,7 @@ export default {
     Listbox, ListboxButton, ListboxOptions, ListboxOption,
     HeadlessDialog, DialogPanel, DialogTitle, TransitionRoot, TransitionChild,
     VueDatePicker,
-    FlaskConical, ScanLine, CheckCircle, AlertCircle, X, Download,
+    FlaskConical, ScanLine, CheckCircle, X, Download,
     ClockIcon, ChevronDown, ChevronLeft, ChevronRight, SearchIcon,
   },
 
@@ -560,7 +637,7 @@ export default {
       lastStatus: null,
       sessionCount: 0,
       history: [],
-      summary: { totalPatients: 0, awaitingReceiveCount: 0, receivedCount: 0, stations: [] },
+      summary: { totalSamples: 0, awaitingReceiveCount: 0, receivedCount: 0, totalPatients: 0, awaitingReceivePatientCount: 0, receivedPatientCount: 0, stations: [] },
       isLoadingSummary: false,
       drilldown: null,
       drilldownSearch: '',
@@ -575,7 +652,21 @@ export default {
       drilldownPatients: [],
       drilldownApiSummary: {},
       drilldownPagination: { page: 1, limit: 20, total: 0, totalPages: 1 },
-      confirmDialog: null,
+      recheckUpdateUnsubscribe: null,
+      exceptionPendingCount: 0,
+      showExceptionsModal: false,
+      exceptionsLoading: false,
+      exceptions: [],
+      exceptionStatusFilter: 'PENDING',
+      exceptionStatusOptions: [
+        { value: 'PENDING', label: 'รอตรวจสอบ' },
+        { value: 'RESOLVED', label: 'แก้ไขแล้ว' },
+        { value: 'DISMISSED', label: 'ไม่ใช่ปัญหา' },
+        { value: 'all', label: 'ทั้งหมด' },
+      ],
+      updatedKeys: [],
+      updateTimers: {},
+      exceptionCountLoaded: false,
     }
   },
 
@@ -591,21 +682,49 @@ export default {
     selectedCNGroup(newVal, oldVal) {
       if ((newVal?.id || null) === (oldVal?.id || null) || this.mode !== 'checkup') return
       this.resetSession()
-      if (newVal) this.loadSummary()
+      if (newVal) {
+        this.loadSummary()
+        this.loadExceptionPendingCount()
+      }
+      this.subscribeRecheckRealtime(newVal?.id || null)
     },
     drilldownScanStatus() {
       this.drilldownPagination.page = 1
       this.loadDrilldownPatients()
     },
+    exceptionStatusFilter() {
+      if (this.showExceptionsModal) this.loadExceptions()
+    },
   },
 
   async mounted() {
     await Promise.all([this.loadBranches(), this.loadCNGroups()])
-    if (this.isReady) this.loadSummary()
+    if (this.isReady) {
+      this.loadSummary()
+      this.loadExceptionPendingCount()
+    }
+    if (this.mode === 'checkup' && this.selectedCNGroupId) this.subscribeRecheckRealtime(this.selectedCNGroupId)
     this.$nextTick(() => this.$refs.barcodeInput?.focus())
   },
 
+  beforeUnmount() {
+    if (this.recheckUpdateUnsubscribe) this.recheckUpdateUnsubscribe()
+    Object.values(this.updateTimers).forEach((timer) => clearTimeout(timer))
+  },
+
   methods: {
+    subscribeRecheckRealtime(cnGroupId) {
+      if (this.recheckUpdateUnsubscribe) {
+        this.recheckUpdateUnsubscribe()
+        this.recheckUpdateUnsubscribe = null
+      }
+      if (!cnGroupId || this.mode !== 'checkup') return
+      this.recheckUpdateUnsubscribe = subscribeToRecheckUpdate(cnGroupId, () => {
+        this.loadSummary(true)
+        this.loadExceptionPendingCount()
+      })
+    },
+
     async loadCNGroups(search = '') {
       this.isLoadingCNGroups = true
       try {
@@ -655,16 +774,113 @@ export default {
       } catch { this.branches = [] }
     },
 
-    async loadSummary() {
+    // silent=true ใช้ตอน refresh เบื้องหลังจาก realtime signal — ไม่ toggle isLoadingSummary
+    // เพื่อไม่ให้การ์ดกระพริบเป็น skeleton ทุกครั้งที่มีคนอื่น recheck (เหมือน ScanDashboard.vue
+    // ที่แยก isUpdating ออกจาก isLoading) และถ้าพลาดก็ไม่ล้างข้อมูลเดิมทิ้ง แค่ log เฉยๆ
+    async loadSummary(silent = false) {
       if (this.mode !== 'checkup' || !this.selectedCNGroupId) return
-      this.isLoadingSummary = true
+      if (!silent) this.isLoadingSummary = true
+      const prev = silent ? this.summary : null
       try {
         const res = await recheckScanService.getRecheckSummary(this.selectedCNGroupId)
-        this.summary = res.data || { totalPatients: 0, awaitingReceiveCount: 0, receivedCount: 0, stations: [] }
-      } catch {
-        this.summary = { totalPatients: 0, awaitingReceiveCount: 0, receivedCount: 0, stations: [] }
+        const next = res.data || { totalSamples: 0, awaitingReceiveCount: 0, receivedCount: 0, totalPatients: 0, awaitingReceivePatientCount: 0, receivedPatientCount: 0, stations: [] }
+        if (prev) this.markSummaryChanges(prev, next)
+        this.summary = next
+      } catch (err) {
+        if (silent) { console.error('Silent loadSummary refresh failed:', err); return }
+        this.summary = { totalSamples: 0, awaitingReceiveCount: 0, receivedCount: 0, totalPatients: 0, awaitingReceivePatientCount: 0, receivedPatientCount: 0, stations: [] }
       } finally {
-        this.isLoadingSummary = false
+        if (!silent) this.isLoadingSummary = false
+      }
+    },
+
+    // เทียบของเก่ากับของใหม่ ให้เห็นว่าการ์ดไหน "เพิ่งเปลี่ยนจริง" แล้วติดไฮไลท์วูบให้เฉพาะการ์ดนั้น
+    // (เหมือน ScanDashboard.vue checkForUpdates) — เทียบก่อน overwrite this.summary เท่านั้น
+    markSummaryChanges(prev, next) {
+      // แยก key ต่อการ์ด ไม่รวมเป็นก้อนเดียว — กัน "ทั้งหมด" กระพริบทั้งที่ตัวเลขตัวเองไม่ได้เปลี่ยน
+      // เพียงเพราะมีการ์ดข้างๆ ขยับ (เช่น recheck สำเร็จ 1 ราย รอเช็คลด/รับแล้วเพิ่ม แต่ทั้งหมดเท่าเดิม)
+      if (prev.totalSamples !== next.totalSamples) this.markKeyUpdated('total')
+      if (prev.awaitingReceiveCount !== next.awaitingReceiveCount) this.markKeyUpdated('awaiting')
+      if (prev.receivedCount !== next.receivedCount) this.markKeyUpdated('received')
+      const prevStations = new Map((prev.stations || []).map(s => [s.stationId, s]))
+      for (const st of next.stations || []) {
+        const old = prevStations.get(st.stationId)
+        if (!old || old.total !== st.total || old.awaitingReceive !== st.awaitingReceive || old.received !== st.received) {
+          this.markKeyUpdated(`station-${st.stationId}`)
+        }
+      }
+    },
+
+    isKeyUpdated(key) {
+      return this.updatedKeys.includes(key)
+    },
+    markKeyUpdated(key) {
+      if (!this.updatedKeys.includes(key)) this.updatedKeys.push(key)
+      if (this.updateTimers[key]) clearTimeout(this.updateTimers[key])
+      this.updateTimers[key] = setTimeout(() => {
+        this.updatedKeys = this.updatedKeys.filter(k => k !== key)
+        delete this.updateTimers[key]
+      }, 3000)
+    },
+
+    async loadExceptionPendingCount() {
+      if (this.mode !== 'checkup' || !this.selectedCNGroupId) return
+      try {
+        const res = await recheckScanService.getRecheckExceptions(this.selectedCNGroupId, { status: 'PENDING', limit: 1 })
+        const next = res.pendingCount || 0
+        if (this.exceptionCountLoaded && next !== this.exceptionPendingCount) this.markKeyUpdated('exceptions')
+        this.exceptionPendingCount = next
+        this.exceptionCountLoaded = true
+      } catch { this.exceptionPendingCount = 0 }
+    },
+
+    openExceptionsModal() {
+      this.showExceptionsModal = true
+      this.exceptionStatusFilter = 'PENDING'
+      this.loadExceptions()
+    },
+
+    closeExceptionsModal() {
+      this.showExceptionsModal = false
+      this.exceptions = []
+    },
+
+    async loadExceptions() {
+      if (!this.selectedCNGroupId) return
+      this.exceptionsLoading = true
+      try {
+        const res = await recheckScanService.getRecheckExceptions(this.selectedCNGroupId, { status: this.exceptionStatusFilter, limit: 50 })
+        this.exceptions = res.data || []
+        this.exceptionPendingCount = res.pendingCount || 0
+      } catch {
+        this.exceptions = []
+      } finally {
+        this.exceptionsLoading = false
+      }
+    },
+
+    async resolveException(ex, status) {
+      const isDismiss = status === 'DISMISSED'
+      const result = await Swal.fire({
+        title: isDismiss ? 'ยืนยันว่าไม่ใช่ปัญหา?' : 'บันทึกว่าแก้ไขแล้ว',
+        input: 'textarea',
+        inputPlaceholder: isDismiss ? 'เช่น ยิงผิดคน ไม่ใช่เคสจริง' : 'เช่น เช็คแล้ว หน้างานลืมยิงจริง ให้ยิงเพิ่มแล้ว',
+        showCancelButton: true,
+        confirmButtonText: 'บันทึก',
+        cancelButtonText: 'ยกเลิก',
+        confirmButtonColor: '#696CFF',
+      })
+      if (!result.isConfirmed) return
+
+      try {
+        const res = await recheckScanService.resolveRecheckException(ex.id, status, result.value || '')
+        if (res.success) {
+          await this.loadExceptions()
+        } else {
+          Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: res.message || 'เกิดข้อผิดพลาด' })
+        }
+      } catch (err) {
+        Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: err?.response?.data?.message || 'เกิดข้อผิดพลาด' })
       }
     },
 
@@ -673,7 +889,11 @@ export default {
       this.mode = newMode
       this.resetSession()
       this.$nextTick(() => this.$refs.barcodeInput?.focus())
-      if (this.isReady) this.loadSummary()
+      if (this.isReady) {
+        this.loadSummary()
+        this.loadExceptionPendingCount()
+      }
+      this.subscribeRecheckRealtime(newMode === 'checkup' ? this.selectedCNGroupId : null)
     },
 
     resetSession() {
@@ -681,10 +901,16 @@ export default {
       this.lastStatus = null
       this.history = []
       this.sessionCount = 0
-      this.summary = { totalPatients: 0, awaitingReceiveCount: 0, receivedCount: 0, stations: [] }
+      this.summary = { totalSamples: 0, awaitingReceiveCount: 0, receivedCount: 0, totalPatients: 0, awaitingReceivePatientCount: 0, receivedPatientCount: 0, stations: [] }
       this.drilldown = null
-      this.confirmDialog = null
       this.patientSearch = ''
+      this.exceptionPendingCount = 0
+      this.exceptionCountLoaded = false
+      // เคลียร์ไฮไลท์ค้างจาก CNGroup เก่า กัน key ชนกัน (เช่น station-5 ของกลุ่มใหม่ดันติดไฮไลท์
+      // ค้างจากกลุ่มเก่าที่มี stationId ตรงกันโดยบังเอิญ)
+      Object.values(this.updateTimers).forEach((timer) => clearTimeout(timer))
+      this.updateTimers = {}
+      this.updatedKeys = []
     },
 
     clearHistory() {
@@ -763,37 +989,9 @@ export default {
         if (res.success) {
           entry.status = 'cancelled'
           entry.scanItemId = null
-          this.loadSummary()
+          this.loadSummary(true)
         }
       } catch { /* ignore */ }
-    },
-
-    async confirmLabCreate() {
-      if (!this.confirmDialog) return
-      const { barcode, name, stationName, time } = this.confirmDialog
-      this.confirmDialog = null
-      this.isScanning = true
-      try {
-        const res = await recheckScanService.recheckLabCreate(barcode, this.selectedCNGroupId)
-        if (res.success) {
-          this.history.unshift({ status: 'lab_created', barcode, name, station: stationName, scanItemId: res.scanItemId, time })
-          this.lastStatus = 'ok'
-          this.sessionCount++
-          this.playSound('success')
-          await this.loadSummary()
-        } else {
-          this.history.unshift({ status: 'error', barcode, time })
-          this.lastStatus = 'error'
-          this.playSound('error')
-        }
-      } catch {
-        this.history.unshift({ status: 'error', barcode, time })
-        this.lastStatus = 'error'
-        this.playSound('error')
-      } finally {
-        this.isScanning = false
-        this.focusInput()
-      }
     },
 
     async handleRecheck() {
@@ -815,25 +1013,6 @@ export default {
           res = await recheckScanService.recheckClinic(raw, this.selectedBranch?.id || null, date)
         }
 
-        if (!res.success && res.notFound) {
-          this.confirmDialog = {
-            barcode: raw,
-            name: res.patient ? `${res.patient.prefix || ''}${res.patient.first_name} ${res.patient.last_name}` : raw,
-            stationName: res.station?.name || '',
-            time,
-          }
-          this.lastStatus = 'error'
-          this.playSound('error')
-          return
-        }
-
-        if (!res.success) {
-          this.history.unshift({ status: 'error', barcode: raw, time })
-          this.lastStatus = 'error'
-          this.playSound('error')
-          return
-        }
-
         const isNew = res.isNewRecheck === true
         const name = res.patient
           ? `${res.patient.prefix || ''}${res.patient.first_name} ${res.patient.last_name}`
@@ -852,17 +1031,22 @@ export default {
           this.lastStatus = 'ok'
           this.sessionCount++
           this.playSound('success')
-          // รีเฟรช summary จาก server แทนการ patch ตัวเลขในเครื่อง กันตัวเลขเพี้ยนจากของจริง
-          this.loadSummary()
+          // รีเฟรช summary จาก server แทนการ patch ตัวเลขในเครื่อง กันตัวเลขเพี้ยนจากของจริง —
+          // silent เพราะยิงรัวๆ ด้วย barcode gun ได้ ไม่อยากให้กระพริบ skeleton ทุกครั้ง
+          this.loadSummary(true)
         } else {
           this.lastStatus = 'duplicate'
           this.playSound('duplicate')
         }
       } catch (err) {
+        // backend ตอบ HTTP 400 เสมอตอน success:false → axios throw ตรงนี้เลย (ไม่ resolve เป็น
+        // res.success:false ให้เช็คแบบปกติ)
         const msg = err?.response?.data?.message || null
         this.history.unshift({ status: 'error', barcode: raw, time, message: msg })
         this.lastStatus = 'error'
         this.playSound('error')
+        // อาจเพิ่งสร้าง RecheckException ไว้ (ไม่พบ CN / ไม่พบการยิงจากหน้างาน) — เช็คตัวเลขใหม่
+        this.loadExceptionPendingCount()
       } finally {
         this.isScanning = false
         this.barcodeValue = ''
@@ -889,3 +1073,20 @@ export default {
   },
 }
 </script>
+
+<style scoped>
+/* เหมือน ScanDashboard.vue — glow วูบเดียวตอนการ์ดอัปเดตจาก realtime signal (ไม่ใช่ตอนโหลดครั้งแรก) */
+@keyframes pulse-update {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.animate-pulse-update {
+  animation: pulse-update 1s ease-in-out infinite;
+}
+</style>

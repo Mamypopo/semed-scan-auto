@@ -85,9 +85,10 @@ router.post(
 
 // Recheck
 router.post("/recheck", authenticateToken, requirePermission(PERMISSIONS.SCAN_CREATE), scanController.recheckCheckpoint);
-router.post("/recheck/lab-create", authenticateToken, requirePermission(PERMISSIONS.SCAN_CREATE), scanController.recheckLabCreate);
 router.delete("/recheck/:id", authenticateToken, requirePermission(PERMISSIONS.SCAN_UPDATE), scanController.cancelRecheck);
 router.get("/recheck/summary", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getRecheckSummary);
 router.get("/recheck/station-patients", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getRecheckStationPatients);
+router.get("/recheck/exceptions", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getRecheckExceptions);
+router.patch("/recheck/exceptions/:id", authenticateToken, requirePermission(PERMISSIONS.SCAN_UPDATE), scanController.resolveRecheckException);
 
 export default router;

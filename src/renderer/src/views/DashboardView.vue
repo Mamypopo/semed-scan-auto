@@ -816,31 +816,6 @@ async function confirmChangeWorkflowMode() {
   }
 }
 
-// ไม่พบ ScanItem จากหน้างาน — ถามยืนยันก่อนว่าจะให้ Lab สร้างเองไหม
-watch(() => recheckStore.pendingNotFound, async (data) => {
-  if (!data) return
-  const { default: Swal } = await import('sweetalert2')
-  const name = data.patient
-    ? `${data.patient.prefix || ''}${data.patient.first_name} ${data.patient.last_name}`
-    : data.barcode
-  const confirm = await Swal.fire({
-    icon: 'warning',
-    title: 'ไม่พบการยิงจากหน้างาน',
-    html: `<b>${name}</b> ยังไม่มี ScanItem ที่จุด <b>${data.station?.name || ''}</b><br>` +
-      `<span style="font-size:0.8em;color:#71717a;">สร้าง ScanItem โดย Lab จะถูกบันทึกว่าสร้างโดย Lab และต้องตรวจสอบย้อนหลัง</span>`,
-    showCancelButton: true,
-    confirmButtonText: 'สร้างโดย Lab',
-    cancelButtonText: 'ยกเลิก',
-    confirmButtonColor: '#FFAB00',
-    customClass: { popup: 'swal-app' }
-  })
-  if (confirm.isConfirmed) {
-    await recheckStore.confirmLabCreate()
-  } else {
-    recheckStore.cancelPendingNotFound()
-  }
-})
-
 // โหลด/รีเซ็ต summary ตอนเปลี่ยน CNGroup (เฉพาะ recheck mode)
 watch(() => authStore.selectedCNGroup?.id, (id) => {
   if (!authStore.isRecheckMode) return

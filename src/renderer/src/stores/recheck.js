@@ -6,18 +6,11 @@ export const useRecheckStore = defineStore('recheck', () => {
   const authStore = useAuthStore()
   const history = ref([])
   const isScanning = ref(false)
-  const pendingNotFound = ref(null) // { barcode, cnGroupId, patient, station, timestamp }
-  const isConfirmingLabCreate = ref(false)
 
   const summary = ref({ totalPatients: 0, awaitingReceiveCount: 0, receivedCount: 0, stations: [] })
   const isLoadingSummary = ref(false)
 
   const recentHistory = computed(() => history.value.slice(0, 20))
-
-  function patientName(p) {
-    if (!p) return null
-    return `${p.prefix || ''} ${p.first_name || ''} ${p.last_name || ''}`.trim()
-  }
 
   function clearHistory() {
     history.value = []
@@ -40,32 +33,6 @@ export const useRecheckStore = defineStore('recheck', () => {
 
   function resetSummary() {
     summary.value = { totalPatients: 0, awaitingReceiveCount: 0, receivedCount: 0, stations: [] }
-  }
-
-  async function confirmLabCreate() {
-    if (!pendingNotFound.value || isConfirmingLabCreate.value) return
-    const { barcode, cnGroupId, patient, station } = pendingNotFound.value
-    isConfirmingLabCreate.value = true
-    pendingNotFound.value = null
-    try {
-      await window.api.recheckLabCreate(barcode, cnGroupId)
-      // ผล success/error จะเข้ามาทาง onRecheckResult/onRecheckError ที่ setupIPCListeners ดักไว้อยู่แล้ว
-    } catch (e) {
-      history.value.unshift({
-        status: 'error',
-        barcode,
-        name: patientName(patient),
-        station: station?.name,
-        message: e.message,
-        time: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-      })
-    } finally {
-      isConfirmingLabCreate.value = false
-    }
-  }
-
-  function cancelPendingNotFound() {
-    pendingNotFound.value = null
   }
 
   async function cancelRecheckEntry(entry) {
@@ -109,26 +76,17 @@ export const useRecheckStore = defineStore('recheck', () => {
       history.value.unshift({ status: 'error', message: data.error, time })
       if (history.value.length > 20) history.value = history.value.slice(0, 20)
     })
-
-    window.api.onRecheckNotFound((data) => {
-      isScanning.value = false
-      pendingNotFound.value = data
-    })
   }
 
   return {
     history,
     recentHistory,
     isScanning,
-    pendingNotFound,
-    isConfirmingLabCreate,
     summary,
     isLoadingSummary,
     clearHistory,
     loadSummary,
     resetSummary,
-    confirmLabCreate,
-    cancelPendingNotFound,
     cancelRecheckEntry,
     setupIPCListeners
   }

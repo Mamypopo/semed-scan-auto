@@ -8,7 +8,7 @@ const { showNotification } = require('./notifier')
 const { saveConfig, clearConfig, getStationIds, getCnGroupId, getScanInputMode, getWorkflowMode } = require('./store')
 const { playSound } = require('./sound')
 const { getMergedConfig, isSoundEnabled, getApiBaseUrl } = require('./config')
-const { login, getStations, getCNGroups, sendScanData, cancelScan, verifyToken, lookupPatient, getRemarkReasons, createStationRemark, deleteStationRemark, recheckCheckpoint, recheckLabCreate, cancelRecheck, getRecheckSummary } = require('./api')
+const { login, getStations, getCNGroups, sendScanData, cancelScan, verifyToken, lookupPatient, getRemarkReasons, createStationRemark, deleteStationRemark, recheckCheckpoint, cancelRecheck, getRecheckSummary } = require('./api')
 
 let mainWindow
 let scannerWorker
@@ -179,7 +179,8 @@ function notifyRecheckResult(result, barcode = null) {
 }
 
 /**
- * แจ้งเตือน Lab Recheck ผิดพลาด (ไม่ใช่ notFound — notFound ต้องถามยืนยันก่อน แยกไปอีก event)
+ * แจ้งเตือน Lab Recheck ผิดพลาด — ทุกเคส reject (CN ไม่เจอ/ไม่ใช่จุดตรวจ LAB/ไม่พบ ScanItem
+ * จากหน้างาน/จุดตรวจไม่ตรงกัน) backend บันทึกเป็น RecheckException ให้เองแล้ว ฝั่งนี้แค่แจ้งผู้ใช้
  */
 function notifyRecheckError(message) {
   sendLog('error', `Recheck ไม่สำเร็จ: ${message}`)
@@ -249,30 +250,10 @@ async function handleRecheckScan(barcode) {
     }
   }
 
+  // ทุกเคส reject ตอบ 400 เสมอแล้ว (backend บันทึกเป็น RecheckException ให้เองอัตโนมัติ
+  // ไม่ต้องถามผู้ใช้ต่อ ไม่มี lab-create อีกแล้ว) เลยแค่ try/catch ธรรมดา
   try {
     const result = await recheckCheckpoint(barcode, cnGroupId)
-
-    if (result.notFound) {
-      // ไม่พบ ScanItem จากหน้างาน — ต้องถามผู้ใช้ก่อนว่าจะให้ Lab สร้างเองไหม (ตอบผ่าน recheck:labCreate)
-      sendLog('warn', `ไม่พบการยิงจากหน้างาน: "${result.station?.name || ''}"`)
-      if (isSoundEnabled()) playSound('error')
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('recheck:notFound', {
-          barcode,
-          cnGroupId,
-          patient: result.patient,
-          station: result.station,
-          timestamp: new Date().toISOString()
-        })
-      }
-      return
-    }
-
-    if (!result.success) {
-      notifyRecheckError(result.message || 'recheck ไม่สำเร็จ')
-      return
-    }
-
     notifyRecheckResult(result, barcode)
   } catch (error) {
     const message = error.response?.data?.message || error.message
@@ -619,22 +600,6 @@ ipcMain.handle('cngroups:get', async (event, search) => {
 // ==========================================
 // Lab Recheck IPC Handlers
 // ==========================================
-
-ipcMain.handle('recheck:labCreate', async (event, { barcode, cnGroupId }) => {
-  try {
-    const result = await recheckLabCreate(barcode, cnGroupId)
-    if (result.success) {
-      notifyRecheckResult(result, barcode)
-    } else {
-      notifyRecheckError(result.message || 'สร้างโดย Lab ไม่สำเร็จ')
-    }
-    return JSON.parse(JSON.stringify(result))
-  } catch (error) {
-    const message = error.response?.data?.message || error.message
-    notifyRecheckError(message)
-    return { success: false, message }
-  }
-})
 
 ipcMain.handle('recheck:cancel', async (event, scanItemId) => {
   try {
