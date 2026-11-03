@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>คู่มือการใช้งาน SEMed Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--pri:#4f52e8;--pri-d:#3b3ec4;--pri-l:#eef2ff;--ink:#18181b;--mut:#64748b;--line:#e4e4e7;--bg:#f4f4f6;--tip:#059669;--warn:#d97706;--note:#2563eb;--danger:#dc2626}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:116px}
+body{margin:0;font-family:'Sarabun','TH Sarabun New','Leelawadee UI',Tahoma,sans-serif;font-size:16px;line-height:1.7;color:var(--ink);background:var(--bg)}
+a{color:var(--pri);text-decoration:none}a:hover{text-decoration:underline}
+/* topbar */
+.topbar{position:sticky;top:0;z-index:50;height:56px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 20px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;white-space:nowrap}
+.brand i{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#696CFF,#5558e3);color:#fff;display:flex;align-items:center;justify-content:center;font-style:normal}
+.brand small{font-weight:400;color:var(--mut)}
+.spacer{flex:1}
+.search{position:relative}
+.search input{width:260px;max-width:34vw;padding:7px 12px 7px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:14px;background:#fafafa}
+.search kbd{position:absolute;right:9px;top:7px;font-size:11px;border:1px solid var(--line);border-radius:5px;padding:0 6px;color:var(--mut);background:#fff}
+.sinfo{font-size:12px;color:var(--mut);white-space:nowrap}
+.sbtn{border:1px solid var(--line);background:#fff;border-radius:8px;width:28px;height:28px;cursor:pointer}
+.btn{border:0;border-radius:10px;padding:8px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;color:#fff;background:var(--pri)}
+.btn.alt{background:#0f766e}
+.btn:hover{filter:brightness(1.08)}
+/* quick bar */
+.quick{position:sticky;top:56px;z-index:49;background:#fafaff;border-bottom:1px solid var(--line);padding:6px 20px;display:flex;gap:8px;flex-wrap:wrap}
+.qcat{position:relative}
+.qcat>button{border:1px solid #c7d2fe;background:#fff;color:var(--pri-d);border-radius:999px;padding:3px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.qcat.open>button{background:var(--pri);color:#fff}
+.qmenu{display:none;position:absolute;top:36px;left:0;width:min(560px,92vw);max-height:70vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 40px -12px rgba(0,0,0,.3);padding:10px}
+.qcat.open .qmenu{display:block}
+.qmenu b{display:block;margin-top:6px}
+.qmenu a{display:block;padding:2px 10px;font-size:14px;color:#3f3f46}
+.qmenu a.ch{font-weight:700;color:var(--pri-d);padding:4px 6px}
+/* layout */
+.wrap{display:grid;grid-template-columns:270px minmax(0,1fr);gap:24px;max-width:1600px;margin:0 auto;padding:20px}
+.toc{position:sticky;top:116px;align-self:start;max-height:calc(100vh - 130px);overflow:auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;font-size:14px}
+.toc a{display:block;padding:3px 8px;border-radius:6px;color:#3f3f46;line-height:1.4}
+.toc a.l2{font-weight:700;margin-top:6px}
+.toc a.l3{padding-left:20px;font-size:13px;color:var(--mut)}
+.toc a.on{background:var(--pri-l);color:var(--pri-d)}
+main#manual{background:#fff;border:1px solid var(--line);border-radius:14px;padding:30px 44px 50px;min-width:0}
+/* cover */
+.cover{min-height:72vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-radius:14px;background:linear-gradient(160deg,#4f52e8,#2e2f9c);color:#fff;padding:40px;margin-bottom:34px}
+.cover .logo{width:84px;height:84px;border-radius:24px;background:#fff;color:var(--pri);font-size:46px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-bottom:26px}
+.cover h1{font-size:44px;margin:0 0 6px;line-height:1.2}
+.cover p{margin:4px 0;font-size:20px;opacity:.92}
+.cover .meta{margin-top:34px;font-size:15px;opacity:.8}
+/* content */
+.chapter{padding-top:8px}
+.chapter+.chapter{margin-top:38px}
+h2{font-size:28px;margin:6px 0 14px;padding-bottom:10px;border-bottom:3px solid var(--pri);display:flex;align-items:center;gap:12px}
+h2 .num{min-width:44px;height:44px;padding:0 8px;border-radius:12px;background:var(--pri);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px}
+h3{font-size:20px;margin:30px 0 8px;color:var(--pri-d)}
+h4{font-size:16px;margin:18px 0 4px}
+p{margin:8px 0}
+ul,ol{margin:8px 0;padding-left:26px}li{margin:3px 0}
+.perm{display:inline-block;font:600 11px/1.6 Consolas,monospace;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;border-radius:6px;padding:0 7px;margin-left:6px;vertical-align:middle}
+code,.k{font-family:Consolas,monospace;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:5px;padding:0 5px;font-size:.92em}
+.ui{font-weight:600;color:#312e81;background:#eef2ff;border-radius:5px;padding:0 5px}
+table{border-collapse:collapse;width:100%;margin:12px 0;font-size:14.5px;display:block;overflow-x:auto}
+thead,tbody{display:table;width:100%}
+th,td{border:1px solid var(--line);padding:7px 10px;vertical-align:top;text-align:left}
+th{background:#f5f5ff;color:#312e81}
+.req{color:var(--danger);font-weight:700}
+.box{border-left:5px solid;border-radius:10px;padding:10px 16px;margin:14px 0;background:#f8fafc}
+.box b.t{display:block;margin-bottom:2px}
+.box.tip{border-color:var(--tip);background:#ecfdf5}.box.tip b.t{color:var(--tip)}
+.box.warn{border-color:var(--warn);background:#fffbeb}.box.warn b.t{color:var(--warn)}
+.box.note{border-color:var(--note);background:#eff6ff}.box.note b.t{color:var(--note)}
+.box.danger{border-color:var(--danger);background:#fef2f2}.box.danger b.t{color:var(--danger)}
+figure.fig{margin:18px 0;border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff;text-align:center}
+figure.fig svg{max-width:100%;height:auto}
+figcaption{text-align:left;font-size:14px;color:#3f3f46;margin-top:8px}
+figcaption b{display:block;margin-bottom:4px}
+figcaption ol{margin:4px 0 0;padding-left:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;column-gap:28px}
+figcaption ol li{break-inside:avoid;padding-left:30px;position:relative;margin:2px 0}
+figcaption ol li::before{content:attr(data-n);position:absolute;left:0;top:1px;width:20px;height:20px;border-radius:50%;background:#dc2626;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.simnote{font-size:13px;color:#b45309}
+mark.hit{background:#fde047;color:inherit;border-radius:3px}
+.totop{position:fixed;right:22px;bottom:22px;width:44px;height:44px;border-radius:50%;border:0;background:var(--pri);color:#fff;font-size:20px;cursor:pointer;display:none;box-shadow:0 6px 18px -4px rgba(0,0,0,.4);z-index:60}
+.steps{counter-reset:s;list-style:none;padding-left:0}
+.steps>li{counter-increment:s;position:relative;padding-left:40px;margin:8px 0}
+.steps>li::before{content:counter(s);position:absolute;left:0;top:1px;width:28px;height:28px;border-radius:50%;background:var(--pri);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px}
+@media (max-width:980px){
+ .wrap{grid-template-columns:1fr;padding:10px}
+ .toc{position:static;max-height:240px}
+ main#manual{padding:18px 16px 36px}
+ .search input{width:150px}.brand small{display:none}
+ figcaption ol{grid-template-columns:1fr}
+ .cover h1{font-size:32px}
+}
+/* print */
+@page{size:A4;margin:16mm 14mm}
+@media print{
+ *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ body{background:#fff;font-size:11.5pt;line-height:1.55}
+ .no-print,.topbar,.quick,.toc,.totop{display:none!important}
+ .wrap{display:block;max-width:none;padding:0}
+ main#manual{border:0;border-radius:0;padding:0}
+ .cover{height:264mm;min-height:0;border-radius:0;margin:0;page-break-after:always;break-after:page}
+ .chapter{page-break-before:always;break-before:page;margin-top:0!important}
+ h2,h3,h4{page-break-after:avoid;break-after:avoid}
+ table,.box,figure.fig,.steps>li,tr{page-break-inside:avoid;break-inside:avoid}
+ table{display:table}thead,tbody{display:table-row-group}
+ thead{display:table-header-group}
+ figure.fig svg{max-height:135mm;width:auto}
+ figcaption{font-size:10.5pt}
+ figcaption ol{grid-template-columns:1fr 1fr!important}
+ main#manual{padding:0!important}
+}
+</style>
+</head>
+<body>
+<header class="topbar no-print">
+ <div class="brand"><i>S</i><span>SEMed Scanner <small>คู่มือการใช้งาน</small></span></div>
+ <div class="spacer"></div>
+ <div class="search"><input id="q" type="search" placeholder="ค้นหาในคู่มือ…" autocomplete="off"><kbd>/</kbd></div>
+ <span class="sinfo" id="sinfo"></span>
+ <button class="sbtn" id="sprev" title="ผลก่อนหน้า">▲</button><button class="sbtn" id="snext" title="ผลถัดไป">▼</button>
+ <button class="btn" id="btnPdf">Export PDF</button>
+ <button class="btn alt" id="btnDoc">Export Word</button>
+</header>
+<nav class="quick no-print" id="quick" aria-label="เมนูลัด"></nav>
+<div class="wrap">
+<aside class="toc no-print" id="toc" aria-label="สารบัญ"></aside>
+<main id="manual">
+
+<section class="cover" id="cover" data-noindex="1">
+ <div class="logo">S</div>
+ <h1>SEMed Scanner</h1>
+ <p>คู่มือการใช้งานสำหรับเจ้าหน้าที่จุดตรวจและห้อง Lab</p>
+ <p>โปรแกรมสแกนบาร์โค้ดผู้ป่วยบนเครื่อง Windows</p>
+ <div class="meta">เอกสารอ้างอิงแอปเวอร์ชัน 1.2.0<br>เขียนจากการอ่านโค้ดของโปรแกรม ภาพหน้าจอเป็นภาพจำลอง</div>
+</section>
+
+<!-- ============ บทที่ 0 ============ -->
+<section class="chapter" id="ch-start" data-cat="เริ่มต้น" data-label="บทที่ 0 เริ่มต้นอ่านคู่มือ">
+<h2><span class="num">0</span>เริ่มต้นอ่านคู่มือ</h2>
+
+<h3 id="s0-1">0.1 โปรแกรมนี้ทำอะไรได้</h3>
+<p><b>SEMed Scanner</b> เป็นโปรแกรมบนเครื่อง Windows สำหรับ <b>ยิงบาร์โค้ดของผู้ป่วย</b> ที่จุดตรวจ แล้วส่งผลไปบันทึกในระบบหลักของ SEMed ทันที โปรแกรมทำงานได้ 2 โหมด</p>
+<table><thead><tr><th>โหมด</th><th>ใช้เมื่อ</th><th>ผลที่เกิดขึ้น</th></tr></thead><tbody>
+<tr><td><b>Checkpoint</b></td><td>เจ้าหน้าที่หน้างานยิงบาร์โค้ดผู้ป่วยที่จุดตรวจ เช่น X-ray</td><td>บันทึกว่าผู้ป่วยเข้ารับการตรวจที่จุดนั้นแล้ว (ดูบทที่ 3)</td></tr>
+<tr><td><b>Lab Recheck</b></td><td>ห้อง Lab ยิงบาร์โค้ดตัวอย่างที่ส่งมาถึง เพื่อยืนยันว่าตัวอย่างมาถึงจริง</td><td>เปลี่ยนสถานะรายการเป็น “Lab รับแล้ว” และแสดงสรุปว่าเหลือรอกี่ราย (ดูบทที่ 4)</td></tr>
+</tbody></table>
+<p>นอกจากนี้ยังมีส่วนเสริม: เพิ่ม/ลบ <b>หมายเหตุจุดตรวจ</b> ของผู้ป่วยแต่ละราย (บทที่ 5), การแจ้งเตือนมุมจอ/เสียง/แผง logs (บทที่ 6), และการอัพเดทโปรแกรมอัตโนมัติ</p>
+
+<h3 id="s0-2">0.2 สัญลักษณ์ที่ใช้ในคู่มือ</h3>
+<div class="box tip"><b class="t">เคล็ดลับ (tip)</b>วิธีที่ทำให้ทำงานเร็วขึ้นหรือพลาดน้อยลง</div>
+<div class="box warn"><b class="t">ข้อควรระวัง (warn)</b>สิ่งที่ทำให้ผลไม่ตรงที่คาด หรือทำให้ต้องทำซ้ำ</div>
+<div class="box note"><b class="t">หมายเหตุ (note)</b>ข้อมูลประกอบเพิ่มเติม รวมถึงจุดที่คู่มือ “ยังไม่ยืนยัน”</div>
+<div class="box danger"><b class="t">อันตราย / ย้อนกลับไม่ได้ (danger)</b>การกระทำที่ลบหรือย้อนคืนไม่ได้</div>
+<ul>
+<li><span class="ui">ข้อความแบบนี้</span> คือข้อความ ชื่อปุ่ม หรือชื่อเมนูที่ปรากฏบนหน้าจอจริง (คัดจากโค้ดของโปรแกรม)</li>
+<li><span class="perm">SCAN_CREATE</span> คือ <b>รหัสสิทธิ์</b> ที่ต้องมีจึงทำงานนั้นได้ (ดูข้อ 0.3)</li>
+<li>ภาพประกอบทุกภาพเป็น <b>ภาพจำลอง</b> วาดตามโครงสร้างหน้าจอในโค้ด ข้อมูลในภาพ (ชื่อผู้ป่วย เลข CN ฯลฯ) เป็นข้อมูลสมมติ ตัวเลขสีแดงในภาพตรงกับรายการใต้ภาพ</li>
+</ul>
+
+<h3 id="s0-3">0.3 ทำไมสิทธิ์ของแต่ละคนไม่เหมือนกัน</h3>
+<p>สิทธิ์ถูกกำหนดที่ระบบหลักตาม <b>บทบาท</b> ของบัญชี ไม่ได้ตั้งในโปรแกรมนี้ โปรแกรมจะส่งคำขอไปให้ระบบหลักตรวจสิทธิ์ทุกครั้ง หากบัญชีของคุณไม่มีสิทธิ์ ระบบจะปฏิเสธและแสดงข้อความ เช่น “คุณไม่มีสิทธิ์ SCAN_CREATE” ดูตารางสิทธิ์ทั้งหมดในภาคผนวก A</p>
+<div class="box note"><b class="t">หมายเหตุ</b>โปรแกรมนี้ <b>ไม่มีหน้าจอผู้ดูแลระบบ</b> (จัดการผู้ใช้ บทบาท สิทธิ์ ประกาศ) การทำงานเหล่านั้นอยู่ในระบบเว็บหลักของ SEMed ซึ่งไม่อยู่ในโค้ดที่ใช้เขียนคู่มือนี้ จึงไม่ได้เขียนบทผู้ดูแลระบบไว้ หากต้องการ ควรทำคู่มือแยกจากระบบหลัก</div>
+
+<h3 id="s0-4">0.4 ข้อกำหนดเครื่อง</h3>
+<ul>
+<li>เครื่อง Windows ที่ติดตั้งโปรแกรม SEMed Scanner และต่อเครือข่ายถึงระบบหลักได้</li>
+<li>เครื่องสแกนบาร์โค้ดแบบ USB ที่ทำงานเหมือนคีย์บอร์ด (ยิงแล้วพิมพ์ตัวอักษรตามด้วย Enter) — โค้ดรับข้อมูลจากคีย์บอร์ดโดยตรง ไม่ต้องตั้งค่าไดรเวอร์พิเศษ</li>
+<li>บัญชีผู้ใช้ SEMed (อีเมล/รหัสผ่าน หรือบัญชี Microsoft)</li>
+</ul>
+</section>
+
+<!-- ============ บทที่ 1 ============ -->
+<section class="chapter" id="ch-login" data-cat="เริ่มต้น" data-label="บทที่ 1 เข้าสู่ระบบและรู้จักหน้าจอ">
+<h2><span class="num">1</span>เข้าสู่ระบบและรู้จักหน้าจอ</h2>
+
+<h3 id="s1-1">1.1 เข้าสู่ระบบ</h3>
+<p><b>วัตถุประสงค์:</b> ยืนยันตัวตนก่อนใช้งาน <b>สิทธิ์ที่ต้องมี:</b> บัญชีที่ใช้งานได้ (ไม่ถูกปิด ไม่หมดอายุ)</p>
+<svg id="fig-login" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500" width="900" height="500" role="img"><rect width="900" height="500" fill="#ffffff"/><rect x="240" y="16" width="420" height="468" rx="10" fill="#f4f4f6" stroke="#d4d4d8" stroke-width="1"/><rect x="240" y="16" width="420" height="36" rx="10" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><rect x="252" y="24" width="20" height="20" rx="6" fill="#696CFF"/><text x="262" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">S</text><text x="280" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#09090b" font-weight="bold" text-anchor="start">SEMed</text><text x="322" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#a1a1aa" font-weight="normal" text-anchor="start">Scanner  v1.2.0</text><rect x="270" y="66" width="360" height="396" rx="12" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><rect x="430" y="82" width="40" height="40" rx="12" fill="#696CFF"/><text x="450" y="110" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="22" fill="#fff" font-weight="bold" text-anchor="middle">S</text><text x="450" y="144" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="16" fill="#09090b" font-weight="bold" text-anchor="middle">เข้าสู่ระบบ</text><text x="450" y="162" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#a1a1aa" font-weight="normal" text-anchor="middle">ใช้บัญชี SEMed ของคุณ</text><text x="294" y="188" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#71717a" font-weight="bold" text-anchor="start">อีเมล</text><rect x="294" y="194" width="312" height="32" rx="8" fill="#fff" stroke="#d4d4d8" stroke-width="1"/><text x="304" y="214.0" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11.5" fill="#a1a1aa" font-weight="normal" text-anchor="start">name@semed.co.th</text><text x="294" y="248" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#71717a" font-weight="bold" text-anchor="start">รหัสผ่าน</text><rect x="294" y="254" width="312" height="32" rx="8" fill="#fff" stroke="#d4d4d8" stroke-width="1"/><text x="304" y="274.0" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11.5" fill="#a1a1aa" font-weight="normal" text-anchor="start">••••••••</text><text x="588" y="275" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#71717a" font-weight="normal" text-anchor="middle">◉</text><rect x="294" y="304" width="13" height="13" rx="3" fill="#fff" stroke="#a1a1aa" stroke-width="1"/><text x="314" y="315" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11.5" fill="#71717a" font-weight="normal" text-anchor="start">จดจำฉันไว้</text><rect x="294" y="330" width="312" height="34" rx="9" fill="#696CFF"/><text x="450.0" y="351.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">เข้าสู่ระบบ</text><line x1="294" y1="388" x2="415" y2="388" stroke="#e4e4e7" stroke-width="1.2"/><line x1="485" y1="388" x2="606" y2="388" stroke="#e4e4e7" stroke-width="1.2"/><text x="450" y="392" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#a1a1aa" font-weight="normal" text-anchor="middle">หรือ</text><rect x="294" y="406" width="312" height="34" rx="9" fill="#fff" stroke="#d4d4d8" stroke-width="1"/><rect x="350" y="416" width="7" height="7" rx="0" fill="#F25022"/><rect x="358" y="416" width="7" height="7" rx="0" fill="#7FBA00"/><rect x="350" y="424" width="7" height="7" rx="0" fill="#00A4EF"/><rect x="358" y="424" width="7" height="7" rx="0" fill="#FFB900"/><text x="374" y="427" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11.5" fill="#52525b" font-weight="bold" text-anchor="start">เข้าสู่ระบบด้วย Microsoft</text><line x1="211" y1="210" x2="294" y2="210" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="294" cy="210" r="2.5" fill="#dc2626"/><circle cx="200" cy="210" r="11" fill="#dc2626"/><text x="200" y="214.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">1</text><line x1="211" y1="270" x2="294" y2="270" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="294" cy="270" r="2.5" fill="#dc2626"/><circle cx="200" cy="270" r="11" fill="#dc2626"/><text x="200" y="274.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">2</text><line x1="689" y1="270" x2="597" y2="270" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="597" cy="270" r="2.5" fill="#dc2626"/><circle cx="700" cy="270" r="11" fill="#dc2626"/><text x="700" y="274.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">3</text><line x1="211" y1="311" x2="294" y2="311" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="294" cy="311" r="2.5" fill="#dc2626"/><circle cx="200" cy="311" r="11" fill="#dc2626"/><text x="200" y="315.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">4</text><line x1="689" y1="347" x2="606" y2="347" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="606" cy="347" r="2.5" fill="#dc2626"/><circle cx="700" cy="347" r="11" fill="#dc2626"/><text x="700" y="351.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">5</text><line x1="211" y1="423" x2="294" y2="423" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="294" cy="423" r="2.5" fill="#dc2626"/><circle cx="200" cy="423" r="11" fill="#dc2626"/><text x="200" y="427.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">6</text></svg>
+<figcaption class="fc" data-for="fig-login"></figcaption>
+<h4>ขั้นตอน (อีเมลและรหัสผ่าน)</h4>
+<ol class="steps">
+<li>เปิดโปรแกรม SEMed Scanner จะเห็นหน้า <span class="ui">เข้าสู่ระบบ</span></li>
+<li>กรอก <span class="ui">อีเมล</span> และ <span class="ui">รหัสผ่าน</span> (กดไอคอนรูปตาเพื่อดูรหัสที่พิมพ์)</li>
+<li>ติ๊ก <span class="ui">จดจำฉันไว้</span> หากต้องการ</li>
+<li>กด <span class="ui">เข้าสู่ระบบ</span> ปุ่มจะเปลี่ยนเป็น “กำลังเข้าสู่ระบบ...” แล้วมีข้อความ “ยินดีต้อนรับ …” มุมขวาบน</li>
+</ol>
+<h4>ขั้นตอน (บัญชี Microsoft)</h4>
+<ol class="steps">
+<li>กด <span class="ui">เข้าสู่ระบบด้วย Microsoft</span> จะมีหน้าต่าง Microsoft Login เปิดขึ้น</li>
+<li>ล็อกอินตามขั้นตอนของ Microsoft เมื่อสำเร็จหน้าต่างจะปิดเอง และเข้าสู่หน้าหลัก</li>
+<li>หากปิดหน้าต่างก่อนเสร็จ จะแจ้ง “ปิดหน้าต่างก่อนเข้าสู่ระบบ”</li>
+</ol>
+<table><thead><tr><th>ช่อง</th><th>บังคับ</th><th>หมายเหตุ</th></tr></thead><tbody>
+<tr><td>อีเมล</td><td class="req">*</td><td>รูปแบบอีเมล เช่น name@semed.co.th</td></tr>
+<tr><td>รหัสผ่าน</td><td class="req">*</td><td>—</td></tr>
+<tr><td>จดจำฉันไว้</td><td>ไม่บังคับ</td><td>ส่งค่านี้ให้ระบบหลักตอนล็อกอิน (รายละเอียดอายุการจดจำกำหนดที่ระบบหลัก ยังไม่ยืนยัน)</td></tr>
+</tbody></table>
+<div class="box warn"><b class="t">ข้อควรระวัง</b>บัญชีที่ผูกกับ Microsoft จะล็อกอินด้วยรหัสผ่านไม่ได้ ระบบจะแจ้งให้กดปุ่ม “เข้าสู่ระบบด้วย Microsoft” แทน</div>
+<p><b>ข้อความที่พบบ่อยตอนเข้าสู่ระบบ</b> (หัวข้อกล่อง: <span class="ui">เข้าสู่ระบบไม่สำเร็จ</span>)</p>
+<table><thead><tr><th>ข้อความ</th><th>สาเหตุ / วิธีแก้</th></tr></thead><tbody>
+<tr><td>อีเมลหรือรหัสผ่านไม่ถูกต้อง</td><td>พิมพ์ผิด ตรวจตัวพิมพ์เล็ก/ใหญ่และภาษาแป้นพิมพ์</td></tr>
+<tr><td>บัญชีนี้ถูกปิดใช้งาน</td><td>ติดต่อผู้ดูแลระบบเพื่อเปิดบัญชี</td></tr>
+<tr><td>บัญชีนี้หมดอายุแล้ว กรุณาติดต่อผู้ดูแลระบบ</td><td>ติดต่อผู้ดูแลระบบเพื่อต่ออายุ</td></tr>
+<tr><td>บัญชีนี้ใช้การเข้าสู่ระบบด้วย Microsoft …</td><td>กดปุ่ม เข้าสู่ระบบด้วย Microsoft</td></tr>
+<tr><td>เชื่อมต่อ server ไม่ได้ กรุณาตรวจสอบ backend (…)</td><td>หน้าต่าง Microsoft โหลดไม่ได้ ตรวจเครือข่าย/ติดต่อผู้ดูแลระบบ</td></tr>
+</tbody></table>
+
+<h3 id="s1-2">1.2 โครงสร้างหน้าจอหลัก</h3>
+<p>หน้าต่างโปรแกรมมีขนาดเริ่มต้น 480×700 พิกเซล (เล็กสุด 400×600) เมื่อเข้าสู่ระบบแล้วจะเห็นแถบบนสุดตลอดเวลา และเนื้อหาด้านล่างเลื่อนขึ้นลงได้</p>
+<table><thead><tr><th>ส่วน</th><th>แสดงอะไร</th></tr></thead><tbody>
+<tr><td>แถบบนสุด (ซ้าย)</td><td>โลโก้ S, ชื่อ <b>SEMed Scanner</b> และเลขเวอร์ชัน (เช่น v1.2.0)</td></tr>
+<tr><td>แถบบนสุด (ขวา)</td><td>จุดสีเขียว + ชื่อผู้ใช้ที่ล็อกอิน และปุ่มไอคอนออกจากระบบ (วางเมาส์เหนือปุ่มจะขึ้น “ออกจากระบบ”)</td></tr>
+<tr><td>แถบอัพเดท</td><td>ปรากฏเมื่อมีเวอร์ชันใหม่ (ดูข้อ 6.4)</td></tr>
+<tr><td>เนื้อหา</td><td>ครั้งแรกให้เลือกโหมด จากนั้นแสดงหน้าทำงานของโหมดนั้น</td></tr>
+</tbody></table>
+
+<h3 id="s1-3">1.3 ออกจากระบบ</h3>
+<p>กดปุ่มไอคอนมุมขวาบน จะมีข้อความ “ออกจากระบบสำเร็จ” <b>และล้างค่าที่จำไว้ทั้งหมดของเครื่องนี้</b> (โหมด จุดตรวจ CNGroup) ต้องเลือกใหม่เมื่อเข้าใช้อีกครั้ง</p>
+
+<h3 id="s1-4">1.4 เซสชันหมดอายุ</h3>
+<p>หากระหว่างสแกนระบบหลักตอบว่าการเข้าสู่ระบบหมดอายุ โปรแกรมจะพาออกจากระบบอัตโนมัติและแสดงกล่อง <span class="ui">หมดอายุการใช้งาน</span> พร้อมข้อความ “กรุณาเข้าสู่ระบบใหม่” กด <span class="ui">ตกลง</span> แล้วล็อกอินใหม่</p>
+<div class="box tip"><b class="t">เคล็ดลับ</b>เมื่อเปิดโปรแกรมใหม่ โปรแกรมจะตรวจ token ที่เก็บไว้ หากยังใช้ได้จะเข้าหน้าหลักเลยโดยไม่ต้องกรอกรหัสอีก</div>
+</section>
+
+<!-- ============ บทที่ 2 ============ -->
+<section class="chapter" id="ch-setup" data-cat="การใช้งาน" data-label="บทที่ 2 ตั้งค่าก่อนเริ่มงาน">
+<h2><span class="num">2</span>ตั้งค่าก่อนเริ่มงาน</h2>
+<p>ก่อนสแกนต้องเลือก 3 อย่างตามลำดับ: <b>โหมด → CNGroup → จุดตรวจ</b> โปรแกรมจำค่าเหล่านี้ไว้ให้เครื่องนี้ ไม่ต้องเลือกซ้ำทุกครั้งที่เปิดโปรแกรม</p>
+
+<h3 id="s2-1">2.1 เลือกโหมดการทำงาน</h3>
+<svg id="fig-mode" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" width="900" height="380" role="img"><rect width="900" height="380" fill="#ffffff"/><rect x="240" y="16" width="420" height="348" rx="10" fill="#f4f4f6" stroke="#d4d4d8" stroke-width="1"/><rect x="240" y="16" width="420" height="36" rx="10" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><rect x="252" y="24" width="20" height="20" rx="6" fill="#696CFF"/><text x="262" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">S</text><text x="280" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#09090b" font-weight="bold" text-anchor="start">SEMed</text><text x="322" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#a1a1aa" font-weight="normal" text-anchor="start">Scanner  v1.2.0</text><rect x="502" y="24" width="108" height="21" rx="6" fill="#fafafa" stroke="#e4e4e7" stroke-width="1"/><circle cx="513" cy="34.5" r="3.5" fill="#34d399"/><text x="521" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#52525b" font-weight="bold" text-anchor="start">สมชาย ใจดี</text><rect x="620" y="24" width="24" height="21" rx="6" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="632" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#71717a" font-weight="normal" text-anchor="middle">⇥</text><rect x="254" y="66" width="392" height="280" rx="12" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><rect x="426" y="82" width="48" height="48" rx="14" fill="#eef2ff"/><text x="450" y="114" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="22" fill="#696CFF" font-weight="normal" text-anchor="middle">☰</text><text x="450" y="154" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="14" fill="#09090b" font-weight="bold" text-anchor="middle">เลือกโหมดการทำงาน</text><text x="450" y="174" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="middle">เลือกครั้งเดียว ระบบจะจำไว้ให้เครื่องนี้ (เปลี่ยนภายหลังได้)</text><rect x="310" y="196" width="280" height="40" rx="9" fill="#696CFF"/><text x="450.0" y="220.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">Checkpoint (สแกนหน้างาน เช่น X-ray)</text><rect x="310" y="248" width="280" height="40" rx="9" fill="#22c55e"/><text x="450.0" y="272.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">Lab Recheck</text><line x1="211" y1="216" x2="310" y2="216" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="310" cy="216" r="2.5" fill="#dc2626"/><circle cx="200" cy="216" r="11" fill="#dc2626"/><text x="200" y="220.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">1</text><line x1="689" y1="268" x2="590" y2="268" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="590" cy="268" r="2.5" fill="#dc2626"/><circle cx="700" cy="268" r="11" fill="#dc2626"/><text x="700" y="272.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">2</text></svg>
+<figcaption class="fc" data-for="fig-mode"></figcaption>
+<ol class="steps">
+<li>เมื่อเข้าสู่ระบบครั้งแรกจะเห็นการ์ด <span class="ui">เลือกโหมดการทำงาน</span> พร้อมข้อความ “เลือกครั้งเดียว ระบบจะจำไว้ให้เครื่องนี้ (เปลี่ยนภายหลังได้)”</li>
+<li>กด <span class="ui">Checkpoint (สแกนหน้างาน เช่น X-ray)</span> หรือ <span class="ui">Lab Recheck</span></li>
+</ol>
+<h4>เปลี่ยนโหมดภายหลัง</h4>
+<p>กดลิงก์ <span class="ui">เปลี่ยนโหมด</span> ที่มุมขวาของบรรทัด “โหมด: …” จะมีกล่องยืนยัน <span class="ui">เปลี่ยนโหมดการทำงาน?</span></p>
+<div class="box warn"><b class="t">ข้อควรระวัง</b>ข้อความในกล่อง: “จะล้างจุดตรวจและ CNGroup ที่เลือกไว้ทั้งหมด ต้องเลือกใหม่หลังเปลี่ยน” กด <span class="ui">เปลี่ยนโหมด</span> เพื่อยืนยัน หรือ <span class="ui">ยกเลิก</span> เพื่อกลับ</div>
+
+<h3 id="s2-2">2.2 เลือก CNGroup</h3>
+<p>CNGroup คือกลุ่มผู้เข้ารับบริการที่จะสแกนในรอบนี้ (เช่น กลุ่มตรวจสุขภาพของบริษัทหนึ่ง) <b>จำเป็นต้องเลือกทั้งสองโหมด</b> ไม่เช่นนั้นสแกนไม่ได้</p>
+<ol class="steps">
+<li>กดปุ่ม <span class="ui">CNGroup</span> (มุมขวาของแถวที่แสดงชื่อ CNGroup) แผงเลือกจะเปิดขึ้น</li>
+<li>พิมพ์ในช่อง <span class="ui">ค้นหา CNGroup...</span> เพื่อกรองรายการ (ค้นหาอัตโนมัติหลังหยุดพิมพ์ประมาณ 0.3 วินาที)</li>
+<li>คลิกชื่อ CNGroup ที่ต้องการ แผงจะปิดเอง และชื่อแสดงเป็นป้ายสีน้ำเงิน เช่น “ตรวจสุขภาพ บริษัท A (CN-A01)” ปุ่ม CNGroup จะมีเครื่องหมาย ✓ สีเขียว</li>
+</ol>
+<p>หากยังไม่เลือก จะเห็นข้อความ “ยังไม่ได้เลือก CNGroup” และแถบเตือนสีเหลือง “กรุณาเลือก CNGroup ก่อนสแกน” พร้อมลิงก์ <span class="ui">เลือก</span> ถ้าไม่พบรายการจะแสดง “ไม่พบ CNGroup”</p>
+
+<h3 id="s2-3">2.3 เลือกจุดตรวจ</h3>
+<svg id="fig-station" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 470" width="900" height="470" role="img"><rect width="900" height="470" fill="#ffffff"/><rect x="240" y="16" width="420" height="438" rx="10" fill="#f4f4f6" stroke="#d4d4d8" stroke-width="1"/><rect x="240" y="16" width="420" height="36" rx="10" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><rect x="252" y="24" width="20" height="20" rx="6" fill="#696CFF"/><text x="262" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">S</text><text x="280" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#09090b" font-weight="bold" text-anchor="start">SEMed</text><text x="322" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#a1a1aa" font-weight="normal" text-anchor="start">Scanner  v1.2.0</text><rect x="502" y="24" width="108" height="21" rx="6" fill="#fafafa" stroke="#e4e4e7" stroke-width="1"/><circle cx="513" cy="34.5" r="3.5" fill="#34d399"/><text x="521" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#52525b" font-weight="bold" text-anchor="start">สมชาย ใจดี</text><rect x="620" y="24" width="24" height="21" rx="6" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="632" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#71717a" font-weight="normal" text-anchor="middle">⇥</text><rect x="254" y="62" width="90" height="18" rx="6" fill="#eef2ff"/><text x="299.0" y="75" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#4338ca" font-weight="bold" text-anchor="middle">● X-ray ปอด</text><rect x="576" y="58" width="70" height="26" rx="9" fill="#eef2ff" stroke="#c7d2fe" stroke-width="1"/><text x="611" y="75" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#4338ca" font-weight="bold" text-anchor="middle">จุดตรวจ 1</text><rect x="254" y="98" width="392" height="340" rx="12" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="268" y="122" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#09090b" font-weight="bold" text-anchor="start">เลือกจุดตรวจ</text><text x="540" y="122" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#a1a1aa" font-weight="normal" text-anchor="end">เลือก 1 จุด</text><rect x="552" y="108" width="82" height="20" rx="7" fill="#fff5f5" stroke="#fecaca" stroke-width="1"/><text x="593" y="122" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#ef4444" font-weight="bold" text-anchor="middle">ล้างทั้งหมด</text><rect x="266" y="134" width="368" height="28" rx="8" fill="#fff" stroke="#d4d4d8" stroke-width="1"/><text x="276" y="152.0" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11.5" fill="#a1a1aa" font-weight="normal" text-anchor="start">🔍 ค้นหาจุดตรวจ...</text><rect x="264" y="172" width="372" height="38" rx="10" fill="#eef2ff"/><rect x="276" y="183" width="16" height="16" rx="4" fill="#696CFF" stroke="#696CFF" stroke-width="1.5"/><text x="284" y="196" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#fff" font-weight="bold" text-anchor="middle">✓</text><text x="304" y="196" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12.5" fill="#09090b" font-weight="normal" text-anchor="start">X-ray ปอด</text><rect x="562" y="181" width="36" height="20" rx="6" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/><text x="580" y="195" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#a1a1aa" font-weight="bold" text-anchor="middle">#12</text><rect x="276" y="227" width="16" height="16" rx="4" fill="#fff" stroke="#d4d4d8" stroke-width="1.5"/><text x="304" y="240" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12.5" fill="#52525b" font-weight="normal" text-anchor="start">วัดความดัน</text><rect x="562" y="225" width="36" height="20" rx="6" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/><text x="580" y="239" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#a1a1aa" font-weight="bold" text-anchor="middle">#7</text><rect x="276" y="271" width="16" height="16" rx="4" fill="#fff" stroke="#d4d4d8" stroke-width="1.5"/><text x="304" y="284" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12.5" fill="#52525b" font-weight="normal" text-anchor="start">เจาะเลือด (LAB)</text><rect x="562" y="269" width="36" height="20" rx="6" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/><text x="580" y="283" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#a1a1aa" font-weight="bold" text-anchor="middle">#16</text><rect x="276" y="315" width="16" height="16" rx="4" fill="#fff" stroke="#d4d4d8" stroke-width="1.5"/><text x="304" y="328" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12.5" fill="#52525b" font-weight="normal" text-anchor="start">EKG</text><rect x="562" y="313" width="36" height="20" rx="6" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/><text x="580" y="327" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#a1a1aa" font-weight="bold" text-anchor="middle">#21</text><rect x="604" y="314" width="34" height="18" rx="5" fill="#fffbeb" stroke="#fde68a" stroke-width="1"/><text x="621" y="327" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#d97706" font-weight="normal" text-anchor="middle">พิเศษ</text><rect x="276" y="359" width="16" height="16" rx="4" fill="#fff" stroke="#d4d4d8" stroke-width="1.5"/><text x="304" y="372" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12.5" fill="#52525b" font-weight="normal" text-anchor="start">ตรวจสายตา</text><rect x="562" y="357" width="36" height="20" rx="6" fill="#f4f4f5" stroke="#e4e4e7" stroke-width="1"/><text x="580" y="371" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#a1a1aa" font-weight="bold" text-anchor="middle">#9</text><line x1="211" y1="75" x2="254" y2="75" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="254" cy="75" r="2.5" fill="#dc2626"/><circle cx="200" cy="75" r="11" fill="#dc2626"/><text x="200" y="79.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">1</text><line x1="689" y1="75" x2="646" y2="75" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="646" cy="75" r="2.5" fill="#dc2626"/><circle cx="700" cy="75" r="11" fill="#dc2626"/><text x="700" y="79.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">2</text><line x1="689" y1="118" x2="634" y2="118" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="634" cy="118" r="2.5" fill="#dc2626"/><circle cx="700" cy="118" r="11" fill="#dc2626"/><text x="700" y="122.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">3</text><line x1="211" y1="148" x2="266" y2="148" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="266" cy="148" r="2.5" fill="#dc2626"/><circle cx="200" cy="148" r="11" fill="#dc2626"/><text x="200" y="152.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">4</text><line x1="211" y1="191" x2="276" y2="191" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="276" cy="191" r="2.5" fill="#dc2626"/><circle cx="200" cy="191" r="11" fill="#dc2626"/><text x="200" y="195.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">5</text><line x1="689" y1="323" x2="621" y2="323" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="621" cy="323" r="2.5" fill="#dc2626"/><circle cx="700" cy="323" r="11" fill="#dc2626"/><text x="700" y="327.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">6</text></svg>
+<figcaption class="fc" data-for="fig-station"></figcaption>
+<ol class="steps">
+<li>กดปุ่ม <span class="ui">จุดตรวจ</span> แผง <span class="ui">เลือกจุดตรวจ</span> จะเปิดขึ้น</li>
+<li>พิมพ์ใน <span class="ui">ค้นหาจุดตรวจ...</span> เพื่อกรอง</li>
+<li>คลิกแถวของจุดตรวจเพื่อ <b>ติ๊กเลือก/ยกเลิก</b> เลือกได้หลายจุดพร้อมกัน ตัวเลขบนปุ่มและข้อความ “เลือก N จุด” จะอัพเดททันที</li>
+<li>กด <span class="ui">จุดตรวจ</span> อีกครั้งเพื่อปิดแผง ป้ายสีน้ำเงินของจุดที่เลือกจะแสดงในแถว</li>
+</ol>
+<ul>
+<li><span class="ui">ล้างทั้งหมด</span> (ปุ่มสีแดง ปรากฏเมื่อมีจุดที่เลือก) ยกเลิกการเลือกทั้งหมดในครั้งเดียว</li>
+<li>ป้าย <span class="ui">พิเศษ</span> คือจุดตรวจที่ระบบหลักระบุว่าเป็นจุดพิเศษ</li>
+<li>หากไม่พบ จะขึ้น “ไม่พบจุดตรวจ”</li>
+</ul>
+<table><thead><tr><th>โหมด</th><th>เลือกจุดตรวจ</th><th>ข้อความเมื่อยังไม่เลือก</th></tr></thead><tbody>
+<tr><td>Checkpoint</td><td class="req">บังคับ</td><td>แถบเตือนสีเหลือง “กรุณาเลือกจุดตรวจก่อนสแกน”</td></tr>
+<tr><td>Lab Recheck</td><td>ไม่บังคับ</td><td>แถบสีเทา “ยังไม่ได้เลือกจุดตรวจ — ไม่บังคับ แต่ช่วยกันสแกนผิดจุดได้ถ้าเลือกไว้”</td></tr>
+</tbody></table>
+<div class="box tip"><b class="t">เคล็ดลับ</b>เลือกจุดตรวจเฉพาะที่เครื่องนี้รับผิดชอบเท่านั้น จุดที่เลือกทำหน้าที่เป็น “รายการที่อนุญาต” หากยิงบาร์โค้ดของจุดอื่น โปรแกรมจะปฏิเสธ ช่วยกันสแกนผิดจุด</div>
+<div class="box note"><b class="t">หมายเหตุ</b>ชื่อจุดตรวจ/CNGroup ที่ค้นหาอัตโนมัติจะโหลดจากระบบหลัก หากเครือข่ายขัดข้องรายการจะว่าง และแผง logs จะมีข้อความ “โหลดจุดตรวจล้มเหลว” หรือ “โหลด CNGroup ล้มเหลว”</div>
+</section>
+
+<!-- ============ บทที่ 3 ============ -->
+<section class="chapter" id="ch-checkpoint" data-cat="การใช้งาน" data-label="บทที่ 3 โหมด Checkpoint">
+<h2><span class="num">3</span>โหมด Checkpoint (สแกนหน้างาน)</h2>
+<p><b>วัตถุประสงค์:</b> บันทึกว่าผู้ป่วยมาตรวจที่จุดตรวจนี้แล้ว <b>สิทธิ์ที่ต้องมี:</b> <span class="perm">SCAN_CREATE</span> (สแกน) และ <span class="perm">SCAN_DELETE</span> (ยกเลิกการสแกน)</p>
+
+<h3 id="s3-1">3.1 ภาพรวมหน้าจอ</h3>
+<svg id="fig-main" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 790" width="900" height="790" role="img"><rect width="900" height="790" fill="#ffffff"/><rect x="240" y="16" width="420" height="756" rx="10" fill="#f4f4f6" stroke="#d4d4d8" stroke-width="1"/><rect x="240" y="16" width="420" height="36" rx="10" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><rect x="252" y="24" width="20" height="20" rx="6" fill="#696CFF"/><text x="262" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">S</text><text x="280" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#09090b" font-weight="bold" text-anchor="start">SEMed</text><text x="322" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#a1a1aa" font-weight="normal" text-anchor="start">Scanner  v1.2.0</text><rect x="502" y="24" width="108" height="21" rx="6" fill="#fafafa" stroke="#e4e4e7" stroke-width="1"/><circle cx="513" cy="34.5" r="3.5" fill="#34d399"/><text x="521" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#52525b" font-weight="bold" text-anchor="start">สมชาย ใจดี</text><rect x="620" y="24" width="24" height="21" rx="6" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="632" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#71717a" font-weight="normal" text-anchor="middle">⇥</text><text x="256" y="76" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#a1a1aa" font-weight="bold" text-anchor="start">โหมด:</text><text x="286" y="76" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#4338ca" font-weight="bold" text-anchor="start">CHECKPOINT</text><text x="644" y="76" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="end">เปลี่ยนโหมด</text><rect x="254" y="90" width="190" height="18" rx="6" fill="#eef2ff"/><text x="349.0" y="103" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#4338ca" font-weight="bold" text-anchor="middle">● ตรวจสุขภาพ บริษัท A (CN-A01)</text><rect x="560" y="86" width="86" height="26" rx="9" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1"/><text x="603" y="103" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#047857" font-weight="bold" text-anchor="middle">CNGroup ✓</text><rect x="254" y="124" width="90" height="18" rx="6" fill="#eef2ff"/><text x="299.0" y="137" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#4338ca" font-weight="bold" text-anchor="middle">● X-ray ปอด</text><rect x="350" y="124" width="96" height="18" rx="6" fill="#eef2ff"/><text x="398.0" y="137" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#4338ca" font-weight="bold" text-anchor="middle">● วัดความดัน</text><rect x="576" y="120" width="70" height="26" rx="9" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="611" y="137" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#52525b" font-weight="bold" text-anchor="middle">จุดตรวจ 2</text><rect x="254" y="160" width="392" height="66" rx="14" fill="#696CFF"/><rect x="268" y="174" width="38" height="38" rx="10" fill="#8588ff"/><text x="287" y="199" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="18" fill="#fff" font-weight="normal" text-anchor="middle">◎</text><text x="318" y="192" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="start">พร้อมรับการสแกน</text><text x="318" y="210" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#e0e7ff" font-weight="normal" text-anchor="start">สแกนบาร์โค้ดผู้ป่วยได้เลย</text><rect x="568" y="182" width="66" height="22" rx="11" fill="#8588ff"/><text x="601" y="197" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#fff" font-weight="bold" text-anchor="middle">● Checkup</text><rect x="254" y="238" width="392" height="118" rx="12" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="268" y="258" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#a1a1aa" font-weight="bold" text-anchor="start">ผลล่าสุด</text><rect x="266" y="266" width="368" height="78" rx="10" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/><rect x="276" y="274" width="36" height="18" rx="6" fill="#dcfce7"/><text x="294.0" y="287" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#15803d" font-weight="bold" text-anchor="middle">ใหม่</text><text x="324" y="287" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="start">X-ray ปอด</text><text x="626" y="287" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="end">09:41:07</text><rect x="572" y="272" width="52" height="18" rx="6" fill="#fff" stroke="#fecaca" stroke-width="1"/><text x="598" y="285" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#FF5151" font-weight="bold" text-anchor="middle">ยกเลิก</text><text x="278" y="305" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12.5" fill="#09090b" font-weight="bold" text-anchor="start">นาย สมหมาย รักดี</text><text x="278" y="320" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#71717a" font-weight="normal" text-anchor="start">HN: 6600123    CN: 691220014</text><text x="278" y="334" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#a1a1aa" font-weight="normal" text-anchor="start">ฝ่ายผลิต · บริษัท A จำกัด</text><rect x="254" y="368" width="392" height="96" rx="12" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="268" y="388" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#a1a1aa" font-weight="bold" text-anchor="start">ประวัติ · 3</text><text x="632" y="388" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#a1a1aa" font-weight="normal" text-anchor="end">ล้าง</text><circle cx="274" cy="404" r="3" fill="#71DD37"/><text x="286" y="408" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#3f3f46" font-weight="normal" text-anchor="start">นาย สมหมาย รักดี</text><text x="632" y="408" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="end">X-ray ปอด</text><circle cx="274" cy="422" r="3" fill="#71DD37"/><text x="286" y="426" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#3f3f46" font-weight="normal" text-anchor="start">น.ส. สายฝน ใจงาม</text><text x="632" y="426" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="end">วัดความดัน</text><circle cx="274" cy="440" r="3" fill="#FF5151"/><text x="286" y="444" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#FF5151" font-weight="normal" text-anchor="start">จุดตรวจไม่ตรงกัน: บาร์โค้ดนี้…</text><text x="632" y="444" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="end">09:40</text><rect x="254" y="476" width="392" height="34" rx="12" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="268" y="498" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#a1a1aa" font-weight="bold" text-anchor="start">logs · 6</text><text x="632" y="498" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#a1a1aa" font-weight="normal" text-anchor="end">⌄</text><rect x="254" y="522" width="392" height="100" rx="12" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><rect x="266" y="534" width="368" height="30" rx="10" fill="#f4f4f5"/><rect x="270" y="538" width="186" height="22" rx="8" fill="#f4f4f5"/><text x="363" y="553" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#c4c4c8" font-weight="bold" text-anchor="middle">⚡ Auto</text><rect x="460" y="538" width="186" height="22" rx="8" fill="#03C3EC"/><text x="553" y="553" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#fff" font-weight="bold" text-anchor="middle">Manual</text><rect x="266" y="576" width="292" height="32" rx="8" fill="#fff" stroke="#d4d4d8" stroke-width="1"/><text x="276" y="596.0" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11.5" fill="#a1a1aa" font-weight="normal" text-anchor="start">พิมพ์หรือสแกน barcode</text><rect x="566" y="576" width="80" height="32" rx="9" fill="#696CFF"/><text x="606.0" y="596.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">สแกน</text><rect x="254" y="634" width="392" height="128" rx="12" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="268" y="656" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#a1a1aa" font-weight="bold" text-anchor="start">✎  เพิ่มหมายเหตุ</text><rect x="266" y="668" width="292" height="32" rx="8" fill="#fff" stroke="#d4d4d8" stroke-width="1"/><text x="276" y="688.0" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11.5" fill="#a1a1aa" font-weight="normal" text-anchor="start">CN.จุดตรวจ เช่น 691220014.16</text><rect x="566" y="668" width="80" height="32" rx="9" fill="#696CFF"/><text x="606.0" y="688.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">ค้นหา</text><text x="268" y="726" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#a1a1aa" font-weight="normal" text-anchor="start">(พิมพ์ CN.จุดตรวจ แล้วกดค้นหา — ดูบทที่ 5)</text><line x1="211" y1="76" x2="252" y2="76" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="252" cy="76" r="2.5" fill="#dc2626"/><circle cx="200" cy="76" r="11" fill="#dc2626"/><text x="200" y="80.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">1</text><line x1="689" y1="76" x2="644" y2="76" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="644" cy="76" r="2.5" fill="#dc2626"/><circle cx="700" cy="76" r="11" fill="#dc2626"/><text x="700" y="80.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">2</text><line x1="211" y1="99" x2="254" y2="99" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="254" cy="99" r="2.5" fill="#dc2626"/><circle cx="200" cy="99" r="11" fill="#dc2626"/><text x="200" y="103.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">3</text><line x1="689" y1="99" x2="646" y2="99" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="646" cy="99" r="2.5" fill="#dc2626"/><circle cx="700" cy="99" r="11" fill="#dc2626"/><text x="700" y="103.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">4</text><line x1="211" y1="137" x2="254" y2="137" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="254" cy="137" r="2.5" fill="#dc2626"/><circle cx="200" cy="137" r="11" fill="#dc2626"/><text x="200" y="141.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">5</text><line x1="689" y1="133" x2="646" y2="133" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="646" cy="133" r="2.5" fill="#dc2626"/><circle cx="700" cy="133" r="11" fill="#dc2626"/><text x="700" y="137.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">6</text><line x1="211" y1="193" x2="254" y2="193" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="254" cy="193" r="2.5" fill="#dc2626"/><circle cx="200" cy="193" r="11" fill="#dc2626"/><text x="200" y="197.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">7</text><line x1="689" y1="193" x2="634" y2="193" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="634" cy="193" r="2.5" fill="#dc2626"/><circle cx="700" cy="193" r="11" fill="#dc2626"/><text x="700" y="197.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">8</text><line x1="211" y1="290" x2="266" y2="290" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="266" cy="290" r="2.5" fill="#dc2626"/><circle cx="200" cy="290" r="11" fill="#dc2626"/><text x="200" y="294.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">9</text><line x1="689" y1="281" x2="624" y2="281" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="624" cy="281" r="2.5" fill="#dc2626"/><circle cx="700" cy="281" r="11" fill="#dc2626"/><text x="700" y="285.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">10</text><line x1="211" y1="420" x2="268" y2="420" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="268" cy="420" r="2.5" fill="#dc2626"/><circle cx="200" cy="420" r="11" fill="#dc2626"/><text x="200" y="424.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">11</text><line x1="689" y1="388" x2="632" y2="388" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="632" cy="388" r="2.5" fill="#dc2626"/><circle cx="700" cy="388" r="11" fill="#dc2626"/><text x="700" y="392.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">12</text><line x1="211" y1="493" x2="254" y2="493" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="254" cy="493" r="2.5" fill="#dc2626"/><circle cx="200" cy="493" r="11" fill="#dc2626"/><text x="200" y="497.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">13</text><line x1="211" y1="553" x2="270" y2="553" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="270" cy="553" r="2.5" fill="#dc2626"/><circle cx="200" cy="553" r="11" fill="#dc2626"/><text x="200" y="557.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">14</text><line x1="689" y1="592" x2="646" y2="592" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="646" cy="592" r="2.5" fill="#dc2626"/><circle cx="700" cy="592" r="11" fill="#dc2626"/><text x="700" y="596.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">15</text><line x1="211" y1="690" x2="266" y2="690" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="266" cy="690" r="2.5" fill="#dc2626"/><circle cx="200" cy="690" r="11" fill="#dc2626"/><text x="200" y="694.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">16</text></svg>
+<figcaption class="fc" data-for="fig-main"></figcaption>
+<p class="simnote">ภาพจำลอง: ลำดับการ์ดและข้อความตรงกับโค้ด แต่ขนาด สี และระยะห่างอาจต่างจากหน้าจอจริงเล็กน้อย</p>
+
+<h3 id="s3-2">3.2 รูปแบบบาร์โค้ด</h3>
+<p>บาร์โค้ดที่โปรแกรมรับต้องเป็นรูปแบบ <code>CN.รหัสจุดตรวจ</code> เช่น <code>691220014.16</code> หมายถึง CN <code>691220014</code> ที่จุดตรวจรหัส <code>16</code> โปรแกรมแยกตัวเลขหลังจุดสุดท้ายเป็นรหัสจุดตรวจ</p>
+<div class="box danger"><b class="t">ต้องมีรหัสจุดตรวจในบาร์โค้ด</b>บาร์โค้ดที่ไม่มีจุด “.” จะถูกปฏิเสธด้วยข้อความ “กรุณาระบุ Station ID ในบาร์โค้ด (CN.STATION_ID)” และไม่มีการบันทึกใดๆ</div>
+
+<h3 id="s3-3">3.3 สถานะ “พร้อมรับการสแกน”</h3>
+<p>การ์ดสถานะสีน้ำเงินแสดง <span class="ui">พร้อมรับการสแกน</span> / “สแกนบาร์โค้ดผู้ป่วยได้เลย” เมื่อเลือก <b>จุดตรวจอย่างน้อย 1 จุดและ CNGroup แล้ว</b> หากยังไม่ครบจะเป็นการ์ดสีขาว <span class="ui">ยังไม่พร้อม</span> / “เลือกจุดตรวจก่อน” ป้าย <span class="ui">Checkup</span> ทางขวาเป็นป้ายแสดงประเภทการสแกน (ไม่ใช่ปุ่ม)</p>
+<div class="box note"><b class="t">หมายเหตุ</b>ข้อความใต้ “ยังไม่พร้อม” พูดถึงเฉพาะจุดตรวจ แต่ถ้าเลือกจุดตรวจแล้วและยังไม่ได้เลือก CNGroup การ์ดก็ยังเป็น “ยังไม่พร้อม” เช่นกัน ให้ดูแถบเตือนสีเหลืองประกอบ</div>
+
+<h3 id="s3-4">3.4 วิธีสแกน</h3>
+<ol class="steps">
+<li>ตรวจว่าการ์ดสถานะเป็น <span class="ui">พร้อมรับการสแกน</span></li>
+<li>ยิงบาร์โค้ดด้วยเครื่องสแกน โปรแกรมรับข้อมูลได้ <b>แม้หน้าต่างโปรแกรมไม่ได้อยู่ด้านหน้า</b> (ดักคีย์บอร์ดทั้งเครื่อง)</li>
+<li>หรือพิมพ์รหัสในช่อง <span class="ui">พิมพ์หรือสแกน barcode</span> แล้วกด Enter หรือปุ่ม <span class="ui">สแกน</span></li>
+<li>ดูผลที่การ์ด <span class="ui">ผลล่าสุด</span>, แจ้งเตือนมุมขวาล่างของจอ และรายการใน <span class="ui">ประวัติ</span></li>
+</ol>
+<h4>โหมดป้อนข้อมูล Auto / Manual</h4>
+<p>ในการ์ดสแกนมีปุ่มสลับ <span class="ui">Auto</span> และ <span class="ui">Manual</span> ปัจจุบัน <b>ปุ่ม Auto ถูกปิดใช้งานชั่วคราว</b> (วางเมาส์จะขึ้น “ปิดใช้งานชั่วคราว: auto mode”) และโปรแกรมตั้งเป็น <b>Manual</b> ทุกครั้งที่เปิด ซึ่งหมายความว่า:</p>
+<ul>
+<li>ต้องเลือกจุดตรวจในแอปก่อน</li>
+<li>จุดตรวจที่ฝังในบาร์โค้ดต้อง <b>ตรงกับจุดที่เลือกไว้ในแอป</b> มิฉะนั้นปฏิเสธ</li>
+<li>เลือกหลายจุดได้ แต่แต่ละการสแกนจะส่งไปที่จุดตรวจที่ฝังในบาร์โค้ดจุดเดียว</li>
+</ul>
+<div class="box warn"><b class="t">ข้อควรระวัง: ความเร็วการยิง</b>โปรแกรมแยก “เครื่องสแกน” ออกจาก “คนพิมพ์” ด้วยความเร็ว: ตัวอักษรต้องมาต่อเนื่องห่างกันไม่เกิน 50 มิลลิวินาที และต้องยาวอย่างน้อย 5 ตัวอักษร จึงจะถือเป็นบาร์โค้ด การพิมพ์ด้วยมือในที่อื่นจึงไม่ทำให้เกิดการสแกน แต่การพิมพ์ในช่อง “พิมพ์หรือสแกน barcode” แล้วกด Enter ใช้ได้เสมอ</div>
+<div class="box tip"><b class="t">เคล็ดลับ</b>ยิงบาร์โค้ดเดิมซ้ำภายใน 1 วินาทีจะถูกข้ามเป็นการกันยิงซ้ำสองครั้ง ไม่ขึ้นผลซ้ำ</div>
+
+<div class="box note"><b class="t">หมายเหตุ: อักขระที่รับ</b>ตัวดักคีย์บอร์ดเบื้องหลังในโค้ดรับเฉพาะตัวอักษร A–Z ตัวเลข 0–9 (รวมแป้นตัวเลข) และจุด “.” อักขระอื่น เช่น “-” หรือ “/” จะไม่ถูกรับ หากป้ายบาร์โค้ดมีอักขระเหล่านี้ให้พิมพ์ในช่อง “พิมพ์หรือสแกน barcode” แทน (ยังไม่ได้ทดสอบกับเครื่องสแกนจริง)</div>
+<h3 id="s3-5">3.5 อ่านผลการสแกน</h3>
+<svg id="fig-result" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 430" width="900" height="430" role="img"><rect width="900" height="430" fill="#ffffff"/><text x="450" y="22" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#52525b" font-weight="bold" text-anchor="middle">ผลล่าสุด — 4 สถานะที่พบ</text><rect x="254" y="36" width="392" height="70" rx="10" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/><rect x="266" y="44" width="40" height="18" rx="6" fill="#dcfce7"/><text x="286.0" y="57" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#15803d" font-weight="bold" text-anchor="middle">ใหม่</text><text x="626" y="57" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="end">09:41:07</text><text x="320" y="57" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="start">X-ray ปอด</text><text x="268" y="80" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12.5" fill="#09090b" font-weight="bold" text-anchor="start">นาย สมหมาย รักดี</text><text x="268" y="96" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#71717a" font-weight="normal" text-anchor="start">HN: 6600123    CN: 691220014</text><rect x="572" y="42" width="52" height="18" rx="6" fill="#fff" stroke="#fecaca" stroke-width="1"/><text x="598" y="55" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#FF5151" font-weight="bold" text-anchor="middle">ยกเลิก</text><rect x="254" y="124" width="392" height="84" rx="10" fill="#fffbeb" stroke="#fde68a" stroke-width="1"/><rect x="266" y="132" width="40" height="18" rx="6" fill="#fef3c7"/><text x="286.0" y="145" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#92400e" font-weight="bold" text-anchor="middle">ซ้ำ</text><text x="626" y="145" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="end">09:42:30</text><text x="320" y="145" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="start">X-ray ปอด</text><text x="268" y="168" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12.5" fill="#09090b" font-weight="bold" text-anchor="start">นาย สมหมาย รักดี</text><text x="268" y="184" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#71717a" font-weight="normal" text-anchor="start">HN: 6600123    CN: 691220014</text><text x="268" y="200" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#71717a" font-weight="normal" text-anchor="start">ผู้ป่วยได้รับการตรวจที่จุดตรวจนี้แล้ว เมื่อ …</text><rect x="572" y="130" width="52" height="18" rx="6" fill="#fff" stroke="#fecaca" stroke-width="1"/><text x="598" y="143" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#FF5151" font-weight="bold" text-anchor="middle">ยกเลิก</text><rect x="254" y="226" width="392" height="52" rx="10" fill="#fff5f5" stroke="#fecaca" stroke-width="1"/><rect x="266" y="238" width="30" height="28" rx="8" fill="#fee2e2"/><text x="281" y="258" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="14" fill="#FF5151" font-weight="bold" text-anchor="middle">✕</text><text x="308" y="256" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#b91c1c" font-weight="bold" text-anchor="start">กรุณาเลือกจุดตรวจก่อนสแกน</text><rect x="576" y="244" width="56" height="18" rx="6" fill="#fee2e2"/><text x="604.0" y="257" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#b91c1c" font-weight="bold" text-anchor="middle">ผิดพลาด</text><text x="310" y="270" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="start">09:43:12</text><rect x="254" y="292" width="392" height="66" rx="10" fill="#fafafa" stroke="#e4e4e7" stroke-width="1"/><rect x="266" y="300" width="66" height="18" rx="6" fill="#f4f4f5"/><text x="299.0" y="313" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#71717a" font-weight="bold" text-anchor="middle">ยกเลิกแล้ว</text><text x="268" y="332" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12.5" fill="#a1a1aa" font-weight="bold" text-anchor="start">นาย สมหมาย รักดี</text><line x1="268" y1="328" x2="380" y2="328" stroke="#a1a1aa" stroke-width="1"/><text x="268" y="348" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#a1a1aa" font-weight="normal" text-anchor="start">HN: 6600123    CN: 691220014</text><line x1="211" y1="78" x2="254" y2="78" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="254" cy="78" r="2.5" fill="#dc2626"/><circle cx="200" cy="78" r="11" fill="#dc2626"/><text x="200" y="82.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">1</text><line x1="211" y1="168" x2="254" y2="168" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="254" cy="168" r="2.5" fill="#dc2626"/><circle cx="200" cy="168" r="11" fill="#dc2626"/><text x="200" y="172.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">2</text><line x1="211" y1="252" x2="254" y2="252" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="254" cy="252" r="2.5" fill="#dc2626"/><circle cx="200" cy="252" r="11" fill="#dc2626"/><text x="200" y="256.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">3</text><line x1="211" y1="325" x2="254" y2="325" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="254" cy="325" r="2.5" fill="#dc2626"/><circle cx="200" cy="325" r="11" fill="#dc2626"/><text x="200" y="329.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">4</text><line x1="689" y1="52" x2="598" y2="42" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="598" cy="42" r="2.5" fill="#dc2626"/><circle cx="700" cy="52" r="11" fill="#dc2626"/><text x="700" y="56.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">5</text></svg>
+<figcaption class="fc" data-for="fig-result"></figcaption>
+<table><thead><tr><th>ป้าย</th><th>ความหมาย</th><th>ต้องทำอะไร</th></tr></thead><tbody>
+<tr><td><span class="ui">ใหม่</span> (เขียว)</td><td>บันทึกการตรวจครั้งแรกที่จุดนี้สำเร็จ</td><td>ไม่ต้องทำอะไร</td></tr>
+<tr><td><span class="ui">ซ้ำ</span> (เหลือง)</td><td>ผู้ป่วยเคยถูกสแกนที่จุดนี้แล้ว ข้อความบอกเวลาและผู้สแกนเดิม</td><td>ตรวจว่ายิงผู้ป่วยถูกคนหรือไม่ ไม่มีการบันทึกซ้ำ</td></tr>
+<tr><td><span class="ui">ผิดพลาด</span> (แดง)</td><td>สแกนไม่สำเร็จ ข้อความสีแดงบอกสาเหตุ</td><td>ดูข้อความและตารางภาคผนวก B</td></tr>
+<tr><td><span class="ui">ยกเลิกแล้ว</span> (เทา)</td><td>การสแกนที่ถูกยกเลิก ชื่อมีเส้นขีดฆ่า</td><td>ยิงใหม่ได้ถ้ายิงผิดโดยไม่ได้ตั้งใจ</td></tr>
+</tbody></table>
+<p>การ์ดผลแสดง ชื่อ-สกุล, <b>HN</b>, <b>CN</b>, แผนก · บริษัท, ชื่อจุดตรวจ, เวลา และข้อความจากระบบหลัก (ถ้ามี)</p>
+
+<h3 id="s3-6">3.6 ยกเลิกการสแกน <span class="perm">SCAN_DELETE</span></h3>
+<ol class="steps">
+<li>กดปุ่ม <span class="ui">ยกเลิก</span> สีแดงที่การ์ด “ผลล่าสุด” — หรือในแถวของ “ประวัติ” (ปุ่มนี้ <b>ปรากฏเมื่อเลื่อนเมาส์ไปที่แถว</b>)</li>
+<li>กล่อง <span class="ui">ยืนยันการยกเลิก</span> แสดงชื่อผู้ป่วยและเวลา</li>
+<li>กด <span class="ui">ยกเลิกการสแกน</span> เพื่อยืนยัน หรือ <span class="ui">ปิด</span> เพื่อกลับ</li>
+<li>สำเร็จ: แจ้งเตือน “🚫 ยกเลิกสแกน” และแถวกลายเป็น “ยกเลิกแล้ว”</li>
+</ol>
+<div class="box danger"><b class="t">ย้อนกลับในโปรแกรมไม่ได้</b>เมื่อยกเลิกแล้ว ปุ่มยกเลิกหายไป หากยกเลิกผิด ให้ยิงบาร์โค้ดนั้นใหม่ (ระบบมีกรณียกเลิกแล้วสแกนใหม่ ซึ่งข้อความจะถูกแจ้งจากระบบหลัก)</div>
+<p>ข้อความที่อาจพบ: “การสแกนนี้ถูกยกเลิกไปแล้ว”, “ไม่พบข้อมูลการสแกน”, “ยกเลิกไม่สำเร็จ” (ดูภาคผนวก B)</p>
+
+<h3 id="s3-7">3.7 ประวัติการสแกน</h3>
+<ul>
+<li>แสดง <b>20 รายการล่าสุด</b> ของการเปิดโปรแกรมครั้งนี้ จุดสีเขียว = สำเร็จ, แดง = ผิดพลาด, เทา = ยกเลิก</li>
+<li>กด <span class="ui">ล้าง</span> เพื่อล้างประวัติและผลล่าสุดบนหน้าจอ (ไม่ได้ลบข้อมูลในระบบหลัก)</li>
+<li>ประวัติหายเมื่อปิดโปรแกรม ไม่ได้เก็บไว้ในเครื่อง</li>
+</ul>
+</section>
+
+<!-- ============ บทที่ 4 ============ -->
+<section class="chapter" id="ch-recheck" data-cat="การใช้งาน" data-label="บทที่ 4 โหมด Lab Recheck">
+<h2><span class="num">4</span>โหมด Lab Recheck</h2>
+<p><b>วัตถุประสงค์:</b> ห้อง Lab ยืนยันว่าตัวอย่างของผู้ป่วยมาถึงจริง โดยเทียบกับรายการที่หน้างานยิงไว้แล้ว <b>สิทธิ์ที่ต้องมี:</b> <span class="perm">SCAN_CREATE</span> (ยิง recheck), <span class="perm">SCAN_UPDATE</span> (ยกเลิก recheck), <span class="perm">SCAN_READ</span> (ดูสรุป)</p>
+<svg id="fig-recheck" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 760" width="900" height="760" role="img"><rect width="900" height="760" fill="#ffffff"/><rect x="240" y="16" width="420" height="728" rx="10" fill="#f4f4f6" stroke="#d4d4d8" stroke-width="1"/><rect x="240" y="16" width="420" height="36" rx="10" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><rect x="252" y="24" width="20" height="20" rx="6" fill="#696CFF"/><text x="262" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">S</text><text x="280" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#09090b" font-weight="bold" text-anchor="start">SEMed</text><text x="322" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#a1a1aa" font-weight="normal" text-anchor="start">Scanner  v1.2.0</text><rect x="502" y="24" width="108" height="21" rx="6" fill="#fafafa" stroke="#e4e4e7" stroke-width="1"/><circle cx="513" cy="34.5" r="3.5" fill="#34d399"/><text x="521" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#52525b" font-weight="bold" text-anchor="start">สมชาย ใจดี</text><rect x="620" y="24" width="24" height="21" rx="6" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="632" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#71717a" font-weight="normal" text-anchor="middle">⇥</text><text x="256" y="76" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#a1a1aa" font-weight="bold" text-anchor="start">โหมด:</text><text x="286" y="76" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#15803d" font-weight="bold" text-anchor="start">LAB RECHECK</text><text x="644" y="76" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="end">เปลี่ยนโหมด</text><rect x="254" y="90" width="190" height="18" rx="6" fill="#eef2ff"/><text x="349.0" y="103" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#4338ca" font-weight="bold" text-anchor="middle">● ตรวจสุขภาพ บริษัท A (CN-A01)</text><rect x="560" y="86" width="86" height="26" rx="9" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1"/><text x="603" y="103" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#047857" font-weight="bold" text-anchor="middle">CNGroup ✓</text><rect x="254" y="122" width="392" height="28" rx="10" fill="#fafafa" stroke="#e4e4e7" stroke-width="1"/><text x="266" y="140" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#71717a" font-weight="normal" text-anchor="start">ยังไม่ได้เลือกจุดตรวจ — ไม่บังคับ แต่ช่วยกันสแกนผิดจุดได้…</text><text x="634" y="140" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#71717a" font-weight="bold" text-anchor="end">เลือก</text><rect x="254" y="162" width="392" height="76" rx="12" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="268" y="182" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#a1a1aa" font-weight="bold" text-anchor="start">ยิง Recheck</text><rect x="266" y="192" width="368" height="36" rx="8" fill="#fff" stroke="#d4d4d8" stroke-width="1"/><text x="278" y="215" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#a1a1aa" font-weight="normal" text-anchor="start">ยิงบาร์โค้ดแล้วกด Enter... (CN.STATION_ID)</text><rect x="254" y="250" width="392" height="190" rx="12" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="268" y="270" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#a1a1aa" font-weight="bold" text-anchor="start">สรุป CNGroup นี้</text><rect x="266" y="278" width="114" height="52" rx="10" fill="#eef2ff" stroke="#c7d2fe" stroke-width="1"/><text x="278" y="296" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#4338ca" font-weight="bold" text-anchor="start">ทั้งหมด</text><text x="278" y="321" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="18" fill="#4338ca" font-weight="bold" text-anchor="start">48</text><rect x="390" y="278" width="114" height="52" rx="10" fill="#fffbeb" stroke="#fde68a" stroke-width="1"/><text x="402" y="296" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#92400e" font-weight="bold" text-anchor="start">รอเช็ค</text><text x="402" y="321" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="18" fill="#92400e" font-weight="bold" text-anchor="start">12</text><rect x="514" y="278" width="114" height="52" rx="10" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/><text x="526" y="296" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#15803d" font-weight="bold" text-anchor="start">Lab รับแล้ว</text><text x="526" y="321" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="18" fill="#15803d" font-weight="bold" text-anchor="start">36</text><rect x="266" y="340" width="368" height="26" rx="8" fill="#fafafa" stroke="#ececec" stroke-width="1"/><text x="278" y="357" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#52525b" font-weight="normal" text-anchor="start">เจาะเลือด CBC</text><text x="634" y="357" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#92400e" font-weight="bold" text-anchor="end">รอ 7 / 48</text><rect x="266" y="370" width="368" height="26" rx="8" fill="#fafafa" stroke="#ececec" stroke-width="1"/><text x="278" y="387" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#52525b" font-weight="normal" text-anchor="start">ปัสสาวะ</text><text x="634" y="387" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#92400e" font-weight="bold" text-anchor="end">รอ 5 / 48</text><rect x="266" y="400" width="368" height="26" rx="8" fill="#fafafa" stroke="#ececec" stroke-width="1"/><text x="278" y="417" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#52525b" font-weight="normal" text-anchor="start">น้ำตาลในเลือด</text><text x="634" y="417" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#15803d" font-weight="bold" text-anchor="end">ครบ / 48</text><rect x="254" y="452" width="392" height="160" rx="12" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="268" y="472" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#a1a1aa" font-weight="bold" text-anchor="start">ประวัติ Recheck · 3</text><text x="632" y="472" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#a1a1aa" font-weight="normal" text-anchor="end">ล้าง</text><rect x="266" y="484" width="368" height="36" rx="8" fill="#fafafa" stroke="#ececec" stroke-width="1"/><rect x="274" y="493" width="44" height="18" rx="6" fill="#dcfce7"/><text x="296.0" y="506" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#15803d" font-weight="bold" text-anchor="middle">สำเร็จ</text><text x="326" y="499" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#09090b" font-weight="bold" text-anchor="start">นาย สมหมาย รักดี</text><text x="326" y="512" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9" fill="#a1a1aa" font-weight="normal" text-anchor="start">691220014.16 · เจาะเลือด CBC · 10:02</text><rect x="584" y="493" width="42" height="18" rx="5" fill="#fff" stroke="#fecaca" stroke-width="1"/><text x="605" y="506" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#ef4444" font-weight="bold" text-anchor="middle">ยกเลิก</text><rect x="266" y="524" width="368" height="36" rx="8" fill="#fafafa" stroke="#ececec" stroke-width="1"/><rect x="274" y="533" width="44" height="18" rx="6" fill="#fef3c7"/><text x="296.0" y="546" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#92400e" font-weight="bold" text-anchor="middle">ซ้ำ</text><text x="326" y="539" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#09090b" font-weight="bold" text-anchor="start">น.ส. สายฝน ใจงาม</text><text x="326" y="552" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9" fill="#a1a1aa" font-weight="normal" text-anchor="start">691220021.16 · เจาะเลือด CBC · 10:03</text><rect x="584" y="533" width="42" height="18" rx="5" fill="#fff" stroke="#fecaca" stroke-width="1"/><text x="605" y="546" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#ef4444" font-weight="bold" text-anchor="middle">ยกเลิก</text><rect x="266" y="564" width="368" height="36" rx="8" fill="#fafafa" stroke="#ececec" stroke-width="1"/><rect x="274" y="573" width="44" height="18" rx="6" fill="#fee2e2"/><text x="296.0" y="586" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#b91c1c" font-weight="bold" text-anchor="middle">ผิดพลาด</text><text x="326" y="579" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#09090b" font-weight="bold" text-anchor="start">691220099.16</text><text x="326" y="592" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9" fill="#a1a1aa" font-weight="normal" text-anchor="start">ไม่พบ CN "691220099" ในระบบ (CNGroup ที่เลือก)</text><text x="268" y="640" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="start">ด้านล่างมีแผง logs เหมือนโหมด Checkpoint</text><line x1="211" y1="76" x2="252" y2="76" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="252" cy="76" r="2.5" fill="#dc2626"/><circle cx="200" cy="76" r="11" fill="#dc2626"/><text x="200" y="80.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">1</text><line x1="689" y1="99" x2="646" y2="99" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="646" cy="99" r="2.5" fill="#dc2626"/><circle cx="700" cy="99" r="11" fill="#dc2626"/><text x="700" y="103.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">2</text><line x1="211" y1="136" x2="254" y2="136" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="254" cy="136" r="2.5" fill="#dc2626"/><circle cx="200" cy="136" r="11" fill="#dc2626"/><text x="200" y="140.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">3</text><line x1="211" y1="210" x2="266" y2="210" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="266" cy="210" r="2.5" fill="#dc2626"/><circle cx="200" cy="210" r="11" fill="#dc2626"/><text x="200" y="214.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">4</text><line x1="689" y1="304" x2="628" y2="304" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="628" cy="304" r="2.5" fill="#dc2626"/><circle cx="700" cy="304" r="11" fill="#dc2626"/><text x="700" y="308.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">5</text><line x1="211" y1="353" x2="266" y2="353" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="266" cy="353" r="2.5" fill="#dc2626"/><circle cx="200" cy="353" r="11" fill="#dc2626"/><text x="200" y="357.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">6</text><line x1="689" y1="353" x2="634" y2="353" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="634" cy="353" r="2.5" fill="#dc2626"/><circle cx="700" cy="353" r="11" fill="#dc2626"/><text x="700" y="357.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">7</text><line x1="211" y1="502" x2="274" y2="502" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="274" cy="502" r="2.5" fill="#dc2626"/><circle cx="200" cy="502" r="11" fill="#dc2626"/><text x="200" y="506.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">8</text><line x1="689" y1="502" x2="605" y2="493" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="605" cy="493" r="2.5" fill="#dc2626"/><circle cx="700" cy="502" r="11" fill="#dc2626"/><text x="700" y="506.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">9</text></svg>
+<figcaption class="fc" data-for="fig-recheck"></figcaption>
+
+<h3 id="s4-1">4.1 เตรียมก่อนเริ่ม</h3>
+<ol class="steps">
+<li>เลือกโหมด <span class="ui">Lab Recheck</span> (ข้อ 2.1)</li>
+<li>เลือก <b>CNGroup</b> (บังคับ) ช่องยิงจะถูกปิดและขึ้น “กรุณาเลือก CNGroup ก่อน” จนกว่าจะเลือก</li>
+<li>เลือกจุดตรวจ (ไม่บังคับ) ถ้าเลือก โปรแกรมจะตรวจว่าจุดในบาร์โค้ดอยู่ในรายการที่เลือกก่อนส่ง ช่วยกันยิงผิดจุด</li>
+</ol>
+
+<h3 id="s4-2">4.2 ยิง Recheck</h3>
+<ol class="steps">
+<li>ยิงบาร์โค้ดรูปแบบ <code>CN.STATION_ID</code> ด้วยเครื่องสแกน หรือพิมพ์ในช่อง <span class="ui">ยิงบาร์โค้ดแล้วกด Enter... (CN.STATION_ID)</span> แล้วกด Enter</li>
+<li>ดูผลในรายการ <span class="ui">ประวัติ Recheck</span> และการแจ้งเตือนมุมจอ</li>
+<li>ตัวเลขสรุปด้านบนอัพเดทอัตโนมัติหลัง recheck สำเร็จครั้งใหม่</li>
+</ol>
+<table><thead><tr><th>ป้ายในประวัติ</th><th>ความหมาย</th></tr></thead><tbody>
+<tr><td><span class="ui">สำเร็จ</span></td><td>recheck ครั้งแรกสำเร็จ — ข้อความ “recheck สำเร็จ”</td></tr>
+<tr><td><span class="ui">ซ้ำ</span></td><td>เคย recheck แล้ว — ข้อความ “recheck แล้ว เมื่อ HH:MM”</td></tr>
+<tr><td><span class="ui">ผิดพลาด</span></td><td>ถูกปฏิเสธ มีข้อความสีแดงใต้แถว</td></tr>
+<tr><td><span class="ui">ยกเลิก</span></td><td>รายการที่ยกเลิก recheck แล้ว (แถวจางลง ชื่อขีดฆ่า)</td></tr>
+</tbody></table>
+
+<h3 id="s4-3">4.3 อ่านสรุป “สรุป CNGroup นี้”</h3>
+<table><thead><tr><th>กล่อง</th><th>ความหมาย</th></tr></thead><tbody>
+<tr><td><span class="ui">ทั้งหมด</span></td><td>จำนวนผู้ป่วยทั้งหมดใน CNGroup</td></tr>
+<tr><td><span class="ui">รอเช็ค</span></td><td>จำนวนที่ยัง “รอ Lab รับ”</td></tr>
+<tr><td><span class="ui">Lab รับแล้ว</span></td><td>จำนวนที่ recheck แล้ว</td></tr>
+<tr><td>รายการต่อจุดตรวจ</td><td>แสดง <span class="ui">รอ N / ทั้งหมด</span> ถ้าเหลือ หรือ <span class="ui">ครบ / ทั้งหมด</span> (สีเขียว) เมื่อไม่เหลือ</td></tr>
+</tbody></table>
+
+<h3 id="s4-4">4.4 ยกเลิก recheck <span class="perm">SCAN_UPDATE</span></h3>
+<ol class="steps">
+<li>กดปุ่ม <span class="ui">ยกเลิก</span> ที่แถวใน “ประวัติ Recheck” (มีเฉพาะแถว สำเร็จ/ซ้ำ)</li>
+<li>กล่อง <span class="ui">ยืนยันการยกเลิก recheck</span> → กด <span class="ui">ยกเลิก recheck</span> หรือ <span class="ui">ปิด</span></li>
+<li>สำเร็จ: แถวเปลี่ยนเป็น “ยกเลิก” และตัวเลขสรุปรีเฟรช ล้มเหลว: กล่อง <span class="ui">ยกเลิกไม่สำเร็จ</span></li>
+</ol>
+<div class="box note"><b class="t">หมายเหตุ</b>ไม่สามารถยกเลิกรายการที่ “ยังไม่ได้ recheck” (ข้อความ “ยังไม่ได้ recheck ไม่สามารถยกเลิกได้”)</div>
+
+<h3 id="s4-5">4.5 เมื่อ recheck ถูกปฏิเสธ</h3>
+<p>Lab <b>สร้างรายการเองไม่ได้</b> หากไม่มีการยิงจากหน้างานมาก่อน ระบบจะปฏิเสธและ <b>บันทึกเป็นรายการผิดปกติ</b> ให้ทะเบียน/หน้างานตามตรวจสอบ ผู้ใช้ไม่ต้องทำอะไรเพิ่มในโปรแกรม ให้แจ้งหน้างานตามข้อความ</p>
+<table><thead><tr><th>ข้อความ</th><th>แปลว่า / ทำอย่างไร</th></tr></thead><tbody>
+<tr><td>ไม่พบ CN "…" ในระบบ (CNGroup ที่เลือก)</td><td>บาร์โค้ดอาจมาจากคนละ CNGroup/รอบ ตรวจว่าเลือก CNGroup ถูกต้อง</td></tr>
+<tr><td>ไม่พบ registration CHECKUP สำหรับ CN นี้</td><td>ผู้ป่วยยังไม่มีการลงทะเบียนตรวจ แจ้งทะเบียน</td></tr>
+<tr><td>ไม่พบจุดตรวจหรือจุดตรวจถูกปิดใช้งาน</td><td>รหัสจุดตรวจในบาร์โค้ดผิดหรือถูกปิด</td></tr>
+<tr><td>"…" ไม่ใช่จุดตรวจ LAB</td><td>ยิงบาร์โค้ดของจุดที่ไม่ใช่ Lab ผิดใบ</td></tr>
+<tr><td>ไม่พบการยิงจากหน้างานสำหรับ "…" กรุณาแจ้งหน้างาน/ทะเบียนให้ตรวจสอบ</td><td>หน้างานยังไม่ได้ยิงหรือยิงผิดรายการ แจ้งหน้างาน</td></tr>
+<tr><td>จุดตรวจไม่ตรงกัน: บาร์โค้ดนี้เป็นของจุดตรวจ #… แต่ไม่อยู่ในรายการที่เลือก</td><td>ตรวจรายการจุดตรวจที่เลือกไว้ในแอป</td></tr>
+</tbody></table>
+</section>
+
+<!-- ============ บทที่ 5 ============ -->
+<section class="chapter" id="ch-remark" data-cat="การใช้งาน" data-label="บทที่ 5 หมายเหตุจุดตรวจ">
+<h2><span class="num">5</span>หมายเหตุจุดตรวจ</h2>
+<p><b>วัตถุประสงค์:</b> บันทึกหมายเหตุของผู้ป่วยรายหนึ่งที่จุดตรวจหนึ่ง เช่น เหตุผลที่ไม่ได้ตรวจ <b>เมนู:</b> การ์ด <span class="ui">เพิ่มหมายเหตุ</span> ล่างสุดของหน้า <b>โหมด Checkpoint เท่านั้น</b> (ไม่มีในโหมด Lab Recheck) <b>สิทธิ์:</b> <span class="perm">STATION_REMARK_CREATE</span> <span class="perm">STATION_REMARK_DELETE</span> <span class="perm">REMARK_REASON_READ</span></p>
+<svg id="fig-remark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" width="900" height="560" role="img"><rect width="900" height="560" fill="#ffffff"/><rect x="240" y="16" width="420" height="528" rx="10" fill="#f4f4f6" stroke="#d4d4d8" stroke-width="1"/><rect x="240" y="16" width="420" height="36" rx="10" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><rect x="252" y="24" width="20" height="20" rx="6" fill="#696CFF"/><text x="262" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">S</text><text x="280" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#09090b" font-weight="bold" text-anchor="start">SEMed</text><text x="322" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#a1a1aa" font-weight="normal" text-anchor="start">Scanner  v1.2.0</text><rect x="502" y="24" width="108" height="21" rx="6" fill="#fafafa" stroke="#e4e4e7" stroke-width="1"/><circle cx="513" cy="34.5" r="3.5" fill="#34d399"/><text x="521" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#52525b" font-weight="bold" text-anchor="start">สมชาย ใจดี</text><rect x="620" y="24" width="24" height="21" rx="6" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="632" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#71717a" font-weight="normal" text-anchor="middle">⇥</text><rect x="254" y="62" width="392" height="470" rx="12" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="268" y="84" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="9.5" fill="#a1a1aa" font-weight="bold" text-anchor="start">✎  เพิ่มหมายเหตุ</text><rect x="266" y="94" width="292" height="32" rx="8" fill="#fff" stroke="#d4d4d8" stroke-width="1"/><text x="276" y="114.0" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11.5" fill="#27272a" font-weight="normal" text-anchor="start">691220014.16</text><rect x="566" y="94" width="80" height="32" rx="9" fill="#696CFF"/><text x="606.0" y="114.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">ค้นหา</text><rect x="266" y="140" width="368" height="138" rx="10" fill="#fafafa" stroke="#e4e4e7" stroke-width="1"/><text x="278" y="162" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#27272a" font-weight="bold" text-anchor="start">นาย สมหมาย รักดี</text><text x="278" y="178" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="start">HN 6600123    CN 691220014</text><rect x="552" y="150" width="84" height="18" rx="6" fill="#dcfce7"/><text x="594.0" y="163" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#15803d" font-weight="bold" text-anchor="middle">มีรายการตรวจ</text><text x="278" y="204" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="8.5" fill="#a1a1aa" font-weight="normal" text-anchor="start">รหัสพนักงาน</text><text x="278" y="217" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#52525b" font-weight="bold" text-anchor="start">E-1024</text><text x="458" y="204" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="8.5" fill="#a1a1aa" font-weight="normal" text-anchor="start">แผนก</text><text x="458" y="217" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#52525b" font-weight="bold" text-anchor="start">ฝ่ายผลิต</text><line x1="266" y1="232" x2="634" y2="232" stroke="#f0f0f0" stroke-width="1.2"/><text x="278" y="250" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#52525b" font-weight="bold" text-anchor="start">📍 เจาะเลือด (LAB)</text><rect x="278" y="256" width="40" height="18" rx="6" fill="#eef2ff"/><text x="298.0" y="269" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#4338ca" font-weight="bold" text-anchor="middle">CBC</text><rect x="324" y="256" width="92" height="18" rx="6" fill="#eef2ff"/><text x="370.0" y="269" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#4338ca" font-weight="bold" text-anchor="middle">น้ำตาลในเลือด</text><text x="268" y="304" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="bold" text-anchor="start">บันทึกหมายเหตุ</text><rect x="266" y="312" width="368" height="32" rx="8" fill="#fff" stroke="#d4d4d8" stroke-width="1"/><text x="278" y="332" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#71717a" font-weight="normal" text-anchor="start">-- เลือกเหตุผล (ไม่บังคับ) --</text><text x="626" y="332" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#a1a1aa" font-weight="normal" text-anchor="end">⌄</text><rect x="266" y="354" width="368" height="58" rx="8" fill="#fff" stroke="#d4d4d8" stroke-width="1"/><text x="278" y="374" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#a1a1aa" font-weight="normal" text-anchor="start">หมายเหตุเพิ่มเติม (ไม่บังคับ)</text><rect x="266" y="424" width="292" height="34" rx="9" fill="#696CFF"/><text x="412.0" y="445.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">บันทึกหมายเหตุ</text><rect x="566" y="424" width="68" height="34" rx="9" fill="#fff5f5" stroke="#fecaca" stroke-width="1"/><text x="600" y="445" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#ef4444" font-weight="bold" text-anchor="middle">ลบ</text><text x="268" y="490" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10" fill="#a1a1aa" font-weight="normal" text-anchor="start">ปุ่ม “ลบ” แสดงเฉพาะเมื่อผู้ป่วยมีหมายเหตุที่บันทึกไว้แล้ว</text><line x1="211" y1="110" x2="266" y2="110" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="266" cy="110" r="2.5" fill="#dc2626"/><circle cx="200" cy="110" r="11" fill="#dc2626"/><text x="200" y="114.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">1</text><line x1="689" y1="110" x2="646" y2="110" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="646" cy="110" r="2.5" fill="#dc2626"/><circle cx="700" cy="110" r="11" fill="#dc2626"/><text x="700" y="114.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">2</text><line x1="689" y1="160" x2="636" y2="160" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="636" cy="160" r="2.5" fill="#dc2626"/><circle cx="700" cy="160" r="11" fill="#dc2626"/><text x="700" y="164.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">3</text><line x1="211" y1="270" x2="278" y2="270" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="278" cy="270" r="2.5" fill="#dc2626"/><circle cx="200" cy="270" r="11" fill="#dc2626"/><text x="200" y="274.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">4</text><line x1="211" y1="328" x2="266" y2="328" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="266" cy="328" r="2.5" fill="#dc2626"/><circle cx="200" cy="328" r="11" fill="#dc2626"/><text x="200" y="332.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">5</text><line x1="689" y1="383" x2="634" y2="383" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="634" cy="383" r="2.5" fill="#dc2626"/><circle cx="700" cy="383" r="11" fill="#dc2626"/><text x="700" y="387.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">6</text><line x1="211" y1="441" x2="266" y2="441" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="266" cy="441" r="2.5" fill="#dc2626"/><circle cx="200" cy="441" r="11" fill="#dc2626"/><text x="200" y="445.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">7</text><line x1="689" y1="441" x2="634" y2="441" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="634" cy="441" r="2.5" fill="#dc2626"/><circle cx="700" cy="441" r="11" fill="#dc2626"/><text x="700" y="445.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">8</text></svg>
+<figcaption class="fc" data-for="fig-remark"></figcaption>
+
+<h3 id="s5-1">5.1 ค้นหาผู้ป่วย</h3>
+<ol class="steps">
+<li>พิมพ์ในช่อง <span class="ui">CN.จุดตรวจ เช่น 691220014.16</span> ตามรูปแบบ <code>CN.รหัสจุดตรวจ</code></li>
+<li>กด Enter หรือปุ่มไอคอนแว่นขยาย</li>
+<li>หากมีหมายเหตุเดิม จะมีกล่อง <span class="ui">มีหมายเหตุอยู่แล้ว</span> แสดงเหตุผลและข้อความเดิม กด <span class="ui">แก้ไขหมายเหตุ</span> เพื่อไปแก้</li>
+</ol>
+<p>ผลค้นหาแสดง ชื่อ, HN, CN, ป้าย <span class="ui">มีรายการตรวจ</span> / <span class="ui">ไม่มีรายการตรวจ</span>, รหัสพนักงาน/ตำแหน่ง/แผนก/บริษัท (เท่าที่มี), ชื่อจุดตรวจ และรายการตรวจที่จุดนั้น</p>
+
+<h3 id="s5-2">5.2 บันทึกหมายเหตุ</h3>
+<p>ส่วนบันทึกจะปรากฏ <b>เฉพาะเมื่อป้ายเป็น “มีรายการตรวจ”</b></p>
+<table><thead><tr><th>ช่อง</th><th>บังคับ</th><th>หมายเหตุ</th></tr></thead><tbody>
+<tr><td>CN.จุดตรวจ (ช่องค้นหา)</td><td class="req">*</td><td>รูปแบบ CN.รหัสจุดตรวจ ถ้าผิดรูปแบบขึ้น “รูปแบบไม่ถูกต้อง”</td></tr>
+<tr><td>เหตุผล (รายการเลือก)</td><td>ไม่บังคับ</td><td>ตัวเลือกแรก “-- เลือกเหตุผล (ไม่บังคับ) --”</td></tr>
+<tr><td>หมายเหตุเพิ่มเติม</td><td>ไม่บังคับ</td><td>ข้อความอิสระ</td></tr>
+</tbody></table>
+<p>กด <span class="ui">บันทึกหมายเหตุ</span> สำเร็จจะขึ้น “บันทึกหมายเหตุสำเร็จ” (ปิดเองใน 2 วินาที) และปุ่ม <span class="ui">ลบ</span> จะปรากฏทันที</p>
+<div class="box note"><b class="t">หมายเหตุ</b>โค้ดไม่ได้บังคับให้เลือกเหตุผลหรือกรอกข้อความ จึงบันทึกหมายเหตุว่างได้ (ยังไม่ยืนยันว่าระบบหลักยอมรับค่าว่างทั้งสองช่องหรือไม่)</div>
+
+<h3 id="s5-3">5.3 ลบหมายเหตุ</h3>
+<ol class="steps">
+<li>ค้นหาผู้ป่วยที่มีหมายเหตุอยู่ แล้วกด <span class="ui">ลบ</span></li>
+<li>กล่อง <span class="ui">ยืนยันการลบหมายเหตุ</span> ระบุชื่อผู้ป่วยและจุดตรวจ → กด <span class="ui">ลบ</span> หรือ <span class="ui">ยกเลิก</span></li>
+<li>สำเร็จ: “ลบหมายเหตุสำเร็จ” และฟอร์มถูกล้าง</li>
+</ol>
+<div class="box danger"><b class="t">ลบแล้วกู้คืนไม่ได้</b>ต้องพิมพ์หมายเหตุใหม่เองหากลบผิด</div>
+
+<h3 id="s5-4">5.4 ข้อความที่พบบ่อย</h3>
+<table><thead><tr><th>ข้อความ</th><th>วิธีแก้</th></tr></thead><tbody>
+<tr><td>รูปแบบไม่ถูกต้อง — กรุณาพิมพ์ในรูปแบบ CN.จุดตรวจ เช่น 691220014.16</td><td>ใส่จุด “.” และรหัสจุดตรวจเป็นตัวเลขต่อท้าย</td></tr>
+<tr><td>ไม่พบผู้ป่วย — ไม่พบผู้ป่วยจาก CN นี้ในจุดตรวจที่เลือก</td><td>ตรวจเลข CN และรหัสจุดตรวจ</td></tr>
+<tr><td>บันทึกไม่สำเร็จ / ลบไม่สำเร็จ</td><td>อ่านข้อความใต้หัวข้อ มักเป็นเรื่องสิทธิ์หรือเครือข่าย</td></tr>
+</tbody></table>
+<div class="box note"><b class="t">หมายเหตุ (ยังไม่ยืนยัน)</b>โค้ดสั่ง “หยุดรับสแกน” ชั่วคราวขณะที่เคอร์เซอร์อยู่ในช่องเลือกเหตุผล/หมายเหตุ เพื่อไม่ให้การพิมพ์ถูกนับเป็นสแกน ยังไม่ได้ทดสอบการทำงานจริงของฟังก์ชันนี้ หากพิมพ์หมายเหตุแล้วพบว่ามีการสแกนแทรกขึ้นมา ให้แจ้งผู้พัฒนา</div>
+</section>
+
+<!-- ============ บทที่ 6 ============ -->
+<section class="chapter" id="ch-notify" data-cat="การใช้งาน" data-label="บทที่ 6 การแจ้งเตือน เสียง และ logs">
+<h2><span class="num">6</span>การแจ้งเตือน เสียง และ logs</h2>
+
+<h3 id="s6-1">6.1 แจ้งเตือนมุมขวาล่างของจอ</h3>
+<svg id="fig-notify" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 380" width="900" height="380" role="img"><rect width="900" height="380" fill="#ffffff"/><rect x="240" y="16" width="420" height="348" rx="10" fill="#f4f4f6" stroke="#d4d4d8" stroke-width="1"/><rect x="240" y="16" width="420" height="36" rx="10" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><rect x="252" y="24" width="20" height="20" rx="6" fill="#696CFF"/><text x="262" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#fff" font-weight="bold" text-anchor="middle">S</text><text x="280" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#09090b" font-weight="bold" text-anchor="start">SEMed</text><text x="322" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="12" fill="#a1a1aa" font-weight="normal" text-anchor="start">Scanner  v1.2.0</text><rect x="502" y="24" width="108" height="21" rx="6" fill="#fafafa" stroke="#e4e4e7" stroke-width="1"/><circle cx="513" cy="34.5" r="3.5" fill="#34d399"/><text x="521" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#52525b" font-weight="bold" text-anchor="start">สมชาย ใจดี</text><rect x="620" y="24" width="24" height="21" rx="6" fill="#fff" stroke="#e4e4e7" stroke-width="1"/><text x="632" y="39" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#71717a" font-weight="normal" text-anchor="middle">⇥</text><rect x="240" y="52" width="420" height="34" rx="0" fill="#fffbeb" stroke="#fde68a" stroke-width="1"/><text x="254" y="74" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#92400e" font-weight="normal" text-anchor="start">⭳ พบเวอร์ชันใหม่ 1.2.1</text><rect x="568" y="58" width="76" height="22" rx="7" fill="#FFAB00"/><text x="606" y="73" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#fff" font-weight="bold" text-anchor="middle">ดาวน์โหลด</text><rect x="240" y="92" width="420" height="34" rx="0" fill="#696CFF"/><text x="254" y="114" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#fff" font-weight="normal" text-anchor="start">⭳ อัพเดทพร้อมแล้ว (1.2.1)</text><rect x="540" y="98" width="104" height="22" rx="7" fill="#8588ff"/><text x="592" y="113" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="10.5" fill="#fff" font-weight="bold" text-anchor="middle">รีสตาร์ทเดี๋ยวนี้</text><text x="250" y="156" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#71717a" font-weight="normal" text-anchor="start">มุมขวาล่างของหน้าจอ Windows:</text><rect x="520" y="200" width="310" height="76" rx="10" fill="#fff" stroke="#86efac" stroke-width="1.5"/><text x="536" y="224" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#166534" font-weight="bold" text-anchor="start">✅ สแกนสำเร็จ</text><text x="536" y="244" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#52525b" font-weight="normal" text-anchor="start">ผู้ป่วย: นาย สมหมาย รักดี</text><text x="536" y="260" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#52525b" font-weight="normal" text-anchor="start">CN: 691220014   จุดตรวจ: X-ray ปอด</text><rect x="520" y="288" width="310" height="76" rx="10" fill="#fff" stroke="#fca5a5" stroke-width="1.5"/><text x="536" y="312" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#b91c1c" font-weight="bold" text-anchor="start">⛔ จุดตรวจไม่ตรงกัน</text><text x="536" y="332" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#52525b" font-weight="normal" text-anchor="start">บาร์โค้ดนี้เป็นของจุดตรวจ #7 แต่ไม่อยู่ใน</text><text x="536" y="348" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="11" fill="#52525b" font-weight="normal" text-anchor="start">รายการที่เลือก</text><line x1="211" y1="69" x2="254" y2="69" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="254" cy="69" r="2.5" fill="#dc2626"/><circle cx="200" cy="69" r="11" fill="#dc2626"/><text x="200" y="73.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">1</text><line x1="211" y1="109" x2="254" y2="109" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="254" cy="109" r="2.5" fill="#dc2626"/><circle cx="200" cy="109" r="11" fill="#dc2626"/><text x="200" y="113.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">2</text><line x1="211" y1="238" x2="520" y2="238" stroke="#dc2626" stroke-width="1.2" stroke-dasharray="3 2"/><circle cx="520" cy="238" r="2.5" fill="#dc2626"/><circle cx="200" cy="238" r="11" fill="#dc2626"/><text x="200" y="242.5" font-family="Sarabun, Tahoma, 'Leelawadee UI', sans-serif" font-size="13" fill="#fff" font-weight="bold" text-anchor="middle">3</text></svg>
+<figcaption class="fc" data-for="fig-notify"></figcaption>
+<p>ทุกผลการสแกนมีกล่องแจ้งเตือนเล็กๆ ลอยที่ <b>มุมขวาล่างของหน้าจอหลัก</b> อยู่ประมาณ 1.5 วินาทีแล้วหายเอง ลอยเหนือโปรแกรมอื่น และแสดงพร้อมกันได้สูงสุด 3 กล่อง (กล่องเก่าสุดถูกปิดก่อน) หัวข้อที่พบ:</p>
+<table><thead><tr><th>หัวข้อ</th><th>เมื่อไร</th></tr></thead><tbody>
+<tr><td>✅ สแกนสำเร็จ</td><td>สแกนใหม่สำเร็จ แสดง ผู้ป่วย / CN / จุดตรวจ</td></tr>
+<tr><td>🔁 สแกนซ้ำ</td><td>เคยสแกนที่จุดนี้แล้ว</td></tr>
+<tr><td>⛔ จุดตรวจไม่ตรงกัน</td><td>จุดในบาร์โค้ดไม่อยู่ในรายการที่เลือก</td></tr>
+<tr><td>⛔ รูปแบบไม่ถูกต้อง</td><td>บาร์โค้ดไม่มี Station ID</td></tr>
+<tr><td>⚠️ ไม่มีจุดตรวจ / ไม่มี CNGroup</td><td>ยังไม่ได้เลือกก่อนสแกน</td></tr>
+<tr><td>⛔ ไม่มีสิทธิ์</td><td>บัญชีไม่มีสิทธิ์ SCAN_CREATE</td></tr>
+<tr><td>❌ ไม่พบข้อมูล</td><td>ไม่พบผู้ป่วยจากบาร์โค้ดนี้</td></tr>
+<tr><td>✅ Recheck สำเร็จ / 🔁 Recheck แล้ว / ❌ Recheck ไม่สำเร็จ</td><td>ผลโหมด Lab Recheck</td></tr>
+<tr><td>🚫 ยกเลิกสแกน / ❌ ยกเลิกไม่สำเร็จ</td><td>ผลการยกเลิก</td></tr>
+</tbody></table>
+<div class="box tip"><b class="t">เคล็ดลับ</b>กล่องแจ้งเตือนหายเร็วมาก หากพลาดข้อความ ให้เปิดแผง <b>logs</b> ในหน้าโปรแกรม (ข้อ 6.3) ซึ่งเก็บข้อความครบทุกรายการ</div>
+
+<h3 id="s6-2">6.2 เสียงแจ้งเตือน</h3>
+<p>เสียงเล่นตามผล (สำเร็จ / ซ้ำ / ผิดพลาด) เฉพาะเมื่อเครื่องถูกตั้งค่าเปิดเสียง (ตัวแปร <code>ENABLE_SOUND=true</code> ในไฟล์ <code>.env</code> ของโปรแกรม) ผู้ใช้ทั่วไปเปลี่ยนค่านี้เองไม่ได้ในหน้าจอ หากไม่มีเสียง ให้แจ้งผู้ดูแลเครื่อง</p>
+
+<h3 id="s6-3">6.3 แผง logs</h3>
+<p>การ์ด <span class="ui">logs</span> ในหน้าหลัก กดที่หัวการ์ดเพื่อเปิด/ปิด แสดงประวัติเหตุการณ์ล่าสุดก่อน แต่ละบรรทัดมีจุดสี เวลา และข้อความ</p>
+<table><thead><tr><th>สีจุด</th><th>ระดับ</th><th>ตัวอย่าง</th></tr></thead><tbody>
+<tr><td>เขียว</td><td>success</td><td>สแกนสำเร็จ: นาย …</td></tr>
+<tr><td>ฟ้า</td><td>info</td><td>Manual scan: "…", โหลดจุดตรวจ: N รายการ, Token OK</td></tr>
+<tr><td>เหลือง</td><td>warn</td><td>Token verify ล้มเหลว</td></tr>
+<tr><td>แดง</td><td>error</td><td>❌ เกิดข้อผิดพลาด: … [สถานะ], Scanner worker หยุดทำงาน</td></tr>
+</tbody></table>
+<ul>
+<li>ป้ายแดง <span class="ui">N err</span> ข้างหัวข้อ logs นับจำนวน error และเมื่อมี error ใหม่ แผงจะเปิดเองอัตโนมัติ</li>
+<li>กด <span class="ui">ล้าง</span> (เมื่อเปิดแผงอยู่) เพื่อล้างรายการ</li>
+<li>เมื่อต้องแจ้งปัญหากับผู้ดูแล ให้ถ่ายภาพแผง logs ส่งไปด้วย</li>
+</ul>
+<div class="box warn"><b class="t">ข้อควรระวัง</b>logs อาจมีชื่อผู้ป่วยและเลข CN ไม่ควรส่งภาพให้บุคคลภายนอก</div>
+
+<h3 id="s6-4">6.4 อัพเดทโปรแกรม</h3>
+<p>หลังเปิดโปรแกรมประมาณ 3 วินาที โปรแกรมตรวจหาเวอร์ชันใหม่เอง (ไม่ตรวจในโหมดนักพัฒนา) จะมีแถบใต้แถบบนสุด:</p>
+<ol class="steps">
+<li><span class="ui">พบเวอร์ชันใหม่ x.y.z</span> → กด <span class="ui">ดาวน์โหลด</span></li>
+<li><span class="ui">ดาวน์โหลดอัพเดท N%</span> รอจนครบ</li>
+<li><span class="ui">อัพเดทพร้อมแล้ว (x.y.z)</span> → กด <span class="ui">รีสตาร์ทเดี๋ยวนี้</span> เพื่อติดตั้ง</li>
+</ol>
+<div class="box warn"><b class="t">ข้อควรระวัง</b>กดรีสตาร์ทขณะกำลังทำงาน จะเสียประวัติบนหน้าจอ (ข้อมูลที่สแกนแล้วยังอยู่ในระบบหลัก) ควรทำช่วงเว้นจากการสแกน หากไม่กด โปรแกรมจะติดตั้งให้ตอนปิดโปรแกรม</div>
+</section>
+
+<!-- ============ บทที่ 7 ============ -->
+<section class="chapter" id="ch-trouble" data-cat="ช่วยเหลือ" data-label="บทที่ 7 แก้ปัญหาที่พบบ่อย">
+<h2><span class="num">7</span>แก้ปัญหาที่พบบ่อย</h2>
+<table><thead><tr><th>อาการ</th><th>ตรวจสอบ / วิธีแก้</th></tr></thead><tbody>
+<tr><td>ยิงแล้วไม่มีอะไรเกิดขึ้นเลย</td><td>1) บาร์โค้ดต้องยาวอย่างน้อย 5 ตัวอักษร 2) เครื่องสแกนต้องส่ง Enter ท้ายรหัส 3) ดู logs ว่ามีข้อความ “Scanner worker หยุดทำงาน” หรือไม่ ถ้ามี ให้ปิดแล้วเปิดโปรแกรมใหม่ 4) ลองพิมพ์รหัสในช่อง “พิมพ์หรือสแกน barcode” เทียบดู</td></tr>
+<tr><td>การ์ดเป็น “ยังไม่พร้อม”</td><td>เลือกจุดตรวจและ CNGroup ให้ครบ (ข้อ 2.2, 2.3)</td></tr>
+<tr><td>ขึ้น “จุดตรวจไม่ตรงกัน…”</td><td>รหัสท้ายบาร์โค้ดไม่อยู่ในจุดที่เลือก — เลือกจุดเพิ่มหรือตรวจว่าถือใบถูกจุดหรือไม่</td></tr>
+<tr><td>ขึ้น “กรุณาระบุ Station ID ในบาร์โค้ด (CN.STATION_ID)”</td><td>ป้ายบาร์โค้ดไม่มีรหัสจุดตรวจ ใช้ป้ายรูปแบบ CN.รหัสจุด</td></tr>
+<tr><td>ขึ้น “คุณไม่มีสิทธิ์ SCAN_CREATE”</td><td>แจ้งผู้ดูแลระบบให้เพิ่มสิทธิ์ให้บัญชีของคุณ</td></tr>
+<tr><td>ถูกพาออกไปหน้าเข้าสู่ระบบเอง</td><td>เซสชันหมดอายุ (ข้อ 1.4) ล็อกอินใหม่ ค่าที่เลือกไว้ถูกล้าง</td></tr>
+<tr><td>รายการจุดตรวจ/CNGroup ว่างเปล่า</td><td>ตรวจการเชื่อมต่อเครือข่าย ดู logs หา “โหลด … ล้มเหลว”</td></tr>
+<tr><td>ไม่มีเสียง</td><td>เสียงต้องเปิดที่ระดับเครื่อง (ข้อ 6.2) และเปิดลำโพง</td></tr>
+<tr><td>พิมพ์ในโปรแกรมอื่นแล้วถูกนับเป็นสแกน</td><td>การพิมพ์เร็วมาก (ตัวอักษรห่างไม่เกิน 50 มิลลิวินาที) แล้วกด Enter อาจถูกนับ — พิมพ์ช้าลงหรือหลีกเลี่ยงการพิมพ์ตัวเลขยาวติดๆ ระหว่างทำงาน</td></tr>
+<tr><td>ไม่เห็นแจ้งเตือนมุมจอ</td><td>โปรแกรมที่เปิดเต็มจอแบบเอกสิทธิ์ (เช่น DirectX) อาจบังกล่อง ดูผลที่ logs แทน</td></tr>
+</tbody></table>
+</section>
+
+<!-- ============ ภาคผนวก A ============ -->
+<section class="chapter" id="ap-perm" data-cat="ภาคผนวก" data-label="ภาคผนวก A ตารางสิทธิ์">
+<h2><span class="num">A</span>ตารางสิทธิ์ที่เกี่ยวข้อง</h2>
+<p>รหัสสิทธิ์อ้างอิงจากเส้นทาง (route) ของระบบหลักที่โปรแกรมเรียกใช้ในโฟลเดอร์ <code>ex</code> ของโปรเจค</p>
+<table><thead><tr><th>รหัสสิทธิ์</th><th>การทำงานในโปรแกรมที่ใช้สิทธิ์นี้</th></tr></thead><tbody>
+<tr><td><span class="perm">SCAN_CREATE</span></td><td>สแกนโหมด Checkpoint, ยิง Recheck</td></tr>
+<tr><td><span class="perm">SCAN_DELETE</span></td><td>ยกเลิกการสแกน (Checkpoint)</td></tr>
+<tr><td><span class="perm">SCAN_UPDATE</span></td><td>ยกเลิก recheck</td></tr>
+<tr><td><span class="perm">SCAN_READ</span></td><td>ดูสรุป “สรุป CNGroup นี้” ของ Lab Recheck</td></tr>
+<tr><td><span class="perm">STATION_REMARK_CREATE</span></td><td>บันทึกหมายเหตุจุดตรวจ</td></tr>
+<tr><td><span class="perm">STATION_REMARK_DELETE</span></td><td>ลบหมายเหตุจุดตรวจ</td></tr>
+<tr><td><span class="perm">REMARK_REASON_READ</span></td><td>โหลดรายการ “เหตุผล” ในฟอร์มหมายเหตุ</td></tr>
+</tbody></table>
+<div class="box note"><b class="t">หมายเหตุ</b>การค้นหาผู้ป่วยในส่วนหมายเหตุ และรายการจุดตรวจ/CNGroup ในแผงเลือก ต้องล็อกอินเท่านั้น (จากโค้ดที่อ่านไม่พบการกำหนดรหัสสิทธิ์เพิ่มสำหรับสองส่วนนี้ แต่ยังไม่ได้ตรวจฝั่งระบบหลักทั้งหมด) ส่วน “บทบาทมาตรฐาน” ว่าบทบาทใดมีสิทธิ์ใดบ้างกำหนดที่ระบบหลัก คู่มือนี้ยังไม่ยืนยัน</div>
+</section>
+
+<!-- ============ ภาคผนวก B ============ -->
+<section class="chapter" id="ap-msg" data-cat="ภาคผนวก" data-label="ภาคผนวก B ข้อความแจ้งเตือนทั้งหมด">
+<h2><span class="num">B</span>ข้อความแจ้งเตือนและ error</h2>
+<table><thead><tr><th>ข้อความ</th><th>เกิดเมื่อ</th><th>วิธีแก้</th></tr></thead><tbody>
+<tr><td>กรุณาเลือกจุดตรวจก่อนสแกน</td><td>Checkpoint ยังไม่ได้เลือกจุดตรวจ</td><td>เลือกจุดตรวจ (2.3)</td></tr>
+<tr><td>กรุณาเลือก CNGroup ก่อนสแกน</td><td>ยังไม่ได้เลือก CNGroup</td><td>เลือก CNGroup (2.2)</td></tr>
+<tr><td>กรุณาระบุ Station ID ในบาร์โค้ด (CN.STATION_ID)</td><td>บาร์โค้ดไม่มีจุด “.”</td><td>ใช้ป้ายรูปแบบ CN.รหัสจุด</td></tr>
+<tr><td>จุดตรวจไม่ตรงกัน: บาร์โค้ดนี้เป็นของจุดตรวจ #N แต่ไม่อยู่ในรายการที่เลือก</td><td>จุดในบาร์โค้ดไม่ตรงกับจุดที่เลือก</td><td>เลือกจุดนั้นเพิ่ม หรือตรวจป้าย</td></tr>
+<tr><td>รูปแบบบาร์โค้ดไม่ถูกต้อง: Station ID ต้องเป็นตัวเลข</td><td>ส่วนท้ายหลังจุดไม่ใช่ตัวเลข</td><td>ตรวจป้ายบาร์โค้ด</td></tr>
+<tr><td>กรุณาระบุ CN และ Station ID</td><td>ขาด CN หรือ Station ID</td><td>ตรวจป้ายบาร์โค้ด</td></tr>
+<tr><td>ไม่พบ CN: … (ใน CNGroup ที่เลือก)</td><td>CN ไม่มีในระบบ/คนละ CNGroup</td><td>ตรวจ CNGroup ที่เลือก</td></tr>
+<tr><td>ไม่พบจุดตรวจที่มี ID: …</td><td>รหัสจุดผิด</td><td>ตรวจป้าย</td></tr>
+<tr><td>จุดตรวจ "…" ไม่ได้เปิดใช้งาน</td><td>จุดตรวจถูกปิด</td><td>แจ้งผู้ดูแล</td></tr>
+<tr><td>CN: … ยังไม่ได้ลงทะเบียน กรุณาลงทะเบียนก่อนเข้ารับการตรวจ</td><td>ผู้ป่วยยังไม่ลงทะเบียน</td><td>ส่งไปลงทะเบียนก่อน</td></tr>
+<tr><td>จุดตรวจ "…" ไม่อยู่ในรายการตรวจของ CN: …</td><td>ผู้ป่วยไม่มีรายการตรวจที่จุดนี้</td><td>ตรวจว่ามาผิดจุดหรือไม่</td></tr>
+<tr><td>ผู้ป่วยได้รับการตรวจที่จุดตรวจนี้แล้ว เมื่อ … โดย …</td><td>สแกนซ้ำ (ป้าย “ซ้ำ”)</td><td>ไม่ต้องทำอะไร</td></tr>
+<tr><td>เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง</td><td>ข้อผิดพลาดฝั่งระบบหลัก</td><td>ลองใหม่ ถ้ายังเป็น แจ้งผู้ดูแลพร้อมภาพ logs</td></tr>
+<tr><td>คุณไม่มีสิทธิ์ SCAN_CREATE</td><td>บัญชีไม่มีสิทธิ์</td><td>แจ้งผู้ดูแล (ภาคผนวก A)</td></tr>
+<tr><td>หมดอายุการใช้งาน / กรุณาเข้าสู่ระบบใหม่</td><td>เซสชันหมดอายุ</td><td>ล็อกอินใหม่</td></tr>
+<tr><td>การสแกนนี้ถูกยกเลิกไปแล้ว / ไม่พบข้อมูลการสแกน</td><td>ยกเลิกซ้ำ</td><td>ไม่ต้องทำอะไร</td></tr>
+<tr><td>ไม่พบ ScanItem / ScanItem ถูกยกเลิกแล้ว</td><td>ยกเลิก recheck ของรายการที่ไม่มี/ยกเลิกไปแล้ว</td><td>ตรวจประวัติ</td></tr>
+<tr><td>เกิดข้อผิดพลาด (ข้อความอื่นจากเซิร์ฟเวอร์)</td><td>เครือข่ายขัดข้องหรือเซิร์ฟเวอร์ตอบผิดปกติ</td><td>ดูแผง logs</td></tr>
+</tbody></table>
+<p>ข้อความ error จากฝั่งเซิร์ฟเวอร์ในตารางนี้คัดจากโค้ดระบบหลักในโฟลเดอร์ <code>ex</code> หากระบบหลักถูกแก้ไขภายหลัง ถ้อยคำอาจต่างไปเล็กน้อย</p>
+</section>
+
+<!-- ============ ภาคผนวก C ============ -->
+<section class="chapter" id="ap-faq" data-cat="ภาคผนวก" data-label="ภาคผนวก C คำถามที่พบบ่อย (FAQ)">
+<h2><span class="num">C</span>คำถามที่พบบ่อย (FAQ)</h2>
+<h4>ปิดโปรแกรมแล้วเปิดใหม่ ต้องเลือกโหมด/จุดตรวจ/CNGroup ใหม่ไหม?</h4>
+<p>ไม่ต้อง หากยังไม่ได้ออกจากระบบ โปรแกรมจำไว้ แต่ “ออกจากระบบ” หรือ “เปลี่ยนโหมด” จะล้างค่าที่จำไว้</p>
+<h4>สแกนผิดคน ทำอย่างไร?</h4>
+<p>กด <span class="ui">ยกเลิก</span> ที่รายการนั้น (บทที่ 3.6) แล้วยิงคนที่ถูกต้อง ต้องมีสิทธิ์ SCAN_DELETE</p>
+<h4>ทำไมยิงแล้วขึ้น “ซ้ำ” ทั้งที่เพิ่งยิงครั้งแรก?</h4>
+<p>อาจมีคนอื่นยิงไว้ก่อนแล้ว ข้อความจะบอกเวลาและชื่อผู้ยิงเดิม</p>
+<h4>ข้อมูลประวัติบนหน้าจอหายไปไหน?</h4>
+<p>ประวัติเก็บเฉพาะระหว่างเปิดโปรแกรมและสูงสุด 20 รายการ ข้อมูลจริงอยู่ในระบบหลัก</p>
+<h4>เลือกหลายจุดตรวจแล้วแต่ละบาร์โค้ดไปทุกจุดเลยไหม?</h4>
+<p>ไม่ใช่ ในโหมดที่ใช้งานอยู่ (Manual) การสแกนถูกส่งไปเฉพาะจุดที่ฝังในบาร์โค้ด จุดที่เลือกทำหน้าที่เป็นรายการอนุญาต</p>
+<h4>ใช้โหมด Auto ได้ไหม?</h4>
+<p>ตอนนี้ปิดใช้งานชั่วคราว ใช้ได้เฉพาะ Manual</p>
+<h4>มีคู่มือสำหรับผู้ดูแลระบบหรือไม่?</h4>
+<p>ไม่มีในเล่มนี้ ดูหัวข้อ 0.3</p>
+</section>
+
+<!-- ============ ภาคผนวก D ============ -->
+<section class="chapter" id="ap-practice" data-cat="ภาคผนวก" data-label="ภาคผนวก D แนวปฏิบัติที่แนะนำ">
+<h2><span class="num">D</span>แนวปฏิบัติที่แนะนำ</h2>
+<ul>
+<li>ตรวจชื่อ CNGroup และจุดตรวจที่แสดงเป็นป้ายสีน้ำเงินทุกครั้งก่อนเริ่มกะ</li>
+<li>เลือกจุดตรวจเฉพาะที่รับผิดชอบ เพื่อให้ระบบช่วยกันสแกนผิดจุด</li>
+<li>ดูการ์ด “ผลล่าสุด” ทุกครั้งที่ยิง โดยเฉพาะป้าย “ซ้ำ” และ “ผิดพลาด” อย่าข้ามไป</li>
+<li>ที่ Lab ให้เลือกจุดตรวจไว้ด้วยแม้ไม่บังคับ และสังเกตตัวเลข “รอเช็ค” ลดลงตามที่คาด</li>
+<li>กรณี recheck ถูกปฏิเสธ ให้แจ้งหน้างาน/ทะเบียนทันที ไม่พยายามสร้างรายการเอง</li>
+<li>ออกจากระบบทุกครั้งเมื่อเลิกใช้เครื่องที่ใช้ร่วมกัน</li>
+<li>เก็บภาพแผง logs ไว้เมื่อต้องแจ้งปัญหา แต่อย่าส่งต่อภายนอกเพราะมีข้อมูลผู้ป่วย</li>
+</ul>
+</section>
+
+</main>
+</div>
+<button class="totop no-print" id="totop" title="กลับขึ้นบนสุด">↑</button>
+
+<script>
+(function(){
+'use strict';
+var manual=document.getElementById('manual');
+
+/* ---- figure captions ---- */
+var CAPS={"fig-login": {"n": 1, "t": "หน้าเข้าสู่ระบบ", "items": ["ช่องอีเมล", "ช่องรหัสผ่าน", "ปุ่มรูปตา แสดง/ซ่อนรหัสผ่าน", "ช่อง จดจำฉันไว้", "ปุ่ม เข้าสู่ระบบ", "ปุ่ม เข้าสู่ระบบด้วย Microsoft"]}, "fig-mode": {"n": 2, "t": "การ์ดเลือกโหมดการทำงาน (ครั้งแรก)", "items": ["ปุ่ม Checkpoint (สแกนหน้างาน เช่น X-ray)", "ปุ่ม Lab Recheck"]}, "fig-station": {"n": 3, "t": "แผงเลือกจุดตรวจ", "items": ["ป้ายจุดตรวจที่เลือกไว้", "ปุ่ม จุดตรวจ (ตัวเลขคือจำนวนที่เลือก)", "ปุ่ม ล้างทั้งหมด", "ช่องค้นหาจุดตรวจ", "แถวจุดตรวจ คลิกเพื่อติ๊กเลือก/ยกเลิก", "ป้าย พิเศษ (จุดตรวจพิเศษ)"]}, "fig-main": {"n": 4, "t": "หน้าหลักของโหมด Checkpoint", "items": ["บรรทัดบอกโหมดปัจจุบัน", "ลิงก์ เปลี่ยนโหมด", "ป้าย CNGroup ที่เลือก", "ปุ่ม CNGroup", "ป้ายจุดตรวจที่เลือก", "ปุ่ม จุดตรวจ", "การ์ดสถานะ พร้อมรับการสแกน", "ป้าย Checkup (แสดงอย่างเดียว)", "การ์ด ผลล่าสุด", "ปุ่ม ยกเลิก การสแกนล่าสุด", "รายการ ประวัติ (20 รายการล่าสุด)", "ปุ่ม ล้าง ประวัติ", "แผง logs (กดเพื่อเปิด/ปิด)", "ปุ่ม Auto (ปิดใช้งาน) / Manual", "ช่องพิมพ์บาร์โค้ด และปุ่ม สแกน", "ช่องค้นหาในการ์ด เพิ่มหมายเหตุ"]}, "fig-result": {"n": 5, "t": "ผลการสแกน 4 แบบ", "items": ["ใหม่: สแกนสำเร็จครั้งแรก", "ซ้ำ: เคยสแกนที่จุดนี้แล้ว (มีข้อความบอกเวลา)", "ผิดพลาด: ข้อความสีแดงบอกสาเหตุ", "ยกเลิกแล้ว: ชื่อมีเส้นขีดฆ่า ไม่มีปุ่มยกเลิก", "ปุ่ม ยกเลิก (เฉพาะรายการที่ยังไม่ถูกยกเลิก)"]}, "fig-remark": {"n": 7, "t": "ฟอร์มเพิ่มหมายเหตุ", "items": ["ช่องกรอก CN.จุดตรวจ", "ปุ่มค้นหา", "ป้าย มีรายการตรวจ / ไม่มีรายการตรวจ", "รายการตรวจที่จุดนั้น", "รายการเลือกเหตุผล (ไม่บังคับ)", "ช่องหมายเหตุเพิ่มเติม (ไม่บังคับ)", "ปุ่ม บันทึกหมายเหตุ", "ปุ่ม ลบ (มีเมื่อมีหมายเหตุเดิม)"]}, "fig-recheck": {"n": 6, "t": "หน้าหลักของโหมด Lab Recheck", "items": ["บรรทัดโหมด Lab Recheck", "ลิงก์ เปลี่ยนโหมด", "คำแนะนำเรื่องจุดตรวจ (ไม่บังคับ)", "ช่อง ยิง Recheck", "กล่องสรุป ทั้งหมด / รอเช็ค / Lab รับแล้ว", "สรุปรายจุดตรวจ", "ค่า รอ N / ทั้งหมด หรือ ครบ", "ป้ายสถานะในประวัติ Recheck", "ปุ่ม ยกเลิก recheck"]}, "fig-notify": {"n": 8, "t": "แถบอัพเดทและกล่องแจ้งเตือน", "items": ["แถบ พบเวอร์ชันใหม่ พร้อมปุ่ม ดาวน์โหลด", "แถบ อัพเดทพร้อมแล้ว พร้อมปุ่ม รีสตาร์ทเดี๋ยวนี้", "กล่องแจ้งเตือนมุมขวาล่างของจอ (ตัวอย่างสำเร็จ และ ผิดพลาด)"]}};
+document.querySelectorAll('figcaption.fc').forEach(function(fc){
+  var id=fc.getAttribute('data-for');var cap=CAPS[id];
+  var svg=document.getElementById(id);
+  if(!cap||!svg)return;
+  var fig=document.createElement('figure');fig.className='fig';
+  svg.parentNode.insertBefore(fig,svg);fig.appendChild(svg);
+  var c=document.createElement('figcaption');
+  var h='<b>ภาพที่ '+cap.n+' '+cap.t+' <span class="simnote">(ภาพจำลอง)</span></b><ol>';
+  cap.items.forEach(function(t,i){h+='<li data-n="'+(i+1)+'">'+t+'</li>';});
+  c.innerHTML=h+'</ol>';fig.appendChild(c);fc.remove();
+});
+
+/* ---- auto ids for h3 ---- */
+var n=0;
+manual.querySelectorAll('h3').forEach(function(h){if(!h.id)h.id='h3-auto-'+(++n);});
+
+/* ---- TOC ---- */
+var toc=document.getElementById('toc');var heads=[];
+manual.querySelectorAll('section.chapter').forEach(function(sec){
+  var h2=sec.querySelector('h2');if(!h2)return;
+  var a=document.createElement('a');a.href='#'+sec.id;a.className='l2';a.textContent=h2.querySelector('.num').textContent+'. '+h2.textContent.slice(h2.querySelector('.num').textContent.length);
+  toc.appendChild(a);heads.push({el:sec,a:a});
+  sec.querySelectorAll('h3').forEach(function(h){
+    var b=document.createElement('a');b.href='#'+h.id;b.className='l3';b.textContent=h.textContent.replace(/\s+[A-Z_]{6,}(\s+[A-Z_]{6,})*$/,'');
+    toc.appendChild(b);heads.push({el:h,a:b});
+  });
+});
+function spy(){
+  var y=window.scrollY+130,cur=null;
+  heads.forEach(function(o){if(o.el.getBoundingClientRect().top+window.scrollY<=y)cur=o;});
+  heads.forEach(function(o){o.a.classList.toggle('on',o===cur);});
+  if(cur){var t=cur.a.offsetTop-toc.clientHeight/2;if(toc.scrollHeight>toc.clientHeight)toc.scrollTop=t;}
+  document.getElementById('totop').style.display=window.scrollY>500?'block':'none';
+}
+window.addEventListener('scroll',spy,{passive:true});spy();
+
+/* ---- quick bar ---- */
+var quick=document.getElementById('quick');var cats={},order=[];
+manual.querySelectorAll('section.chapter').forEach(function(sec){
+  var c=sec.getAttribute('data-cat');if(!cats[c]){cats[c]=[];order.push(c);}cats[c].push(sec);
+});
+order.forEach(function(c){
+  var d=document.createElement('div');d.className='qcat';
+  var b=document.createElement('button');b.type='button';b.textContent=c+' ▾';d.appendChild(b);
+  var m=document.createElement('div');m.className='qmenu';
+  cats[c].forEach(function(sec){
+    var a=document.createElement('a');a.className='ch';a.href='#'+sec.id;a.textContent=sec.getAttribute('data-label');m.appendChild(a);
+    sec.querySelectorAll('h3').forEach(function(h){
+      var s=document.createElement('a');s.href='#'+h.id;s.textContent=h.textContent.replace(/\s+[A-Z_]{6,}(\s+[A-Z_]{6,})*$/,'');m.appendChild(s);
+    });
+  });
+  d.appendChild(m);quick.appendChild(d);
+  b.addEventListener('click',function(e){e.stopPropagation();var o=d.classList.contains('open');closeMenus();if(!o)d.classList.add('open');});
+});
+function closeMenus(){quick.querySelectorAll('.qcat.open').forEach(function(x){x.classList.remove('open');});}
+document.addEventListener('click',function(e){if(!e.target.closest('.qcat'))closeMenus();else if(e.target.closest('.qmenu a'))closeMenus();});
+
+/* ---- search ---- */
+var q=document.getElementById('q'),info=document.getElementById('sinfo'),hits=[],cur=-1;
+function clearHits(){manual.querySelectorAll('mark.hit').forEach(function(m){var p=m.parentNode;p.replaceChild(document.createTextNode(m.textContent),m);p.normalize();});hits=[];cur=-1;info.textContent='';}
+function runSearch(){
+  clearHits();var term=q.value.trim();if(term.length<2)return;
+  var lo=term.toLowerCase();
+  var walker=document.createTreeWalker(manual,NodeFilter.SHOW_TEXT,{acceptNode:function(nd){
+    if(!nd.nodeValue||nd.parentNode.closest('svg,script,style,.cover'))return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_ACCEPT;}});
+  var nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+  nodes.forEach(function(nd){
+    var t=nd.nodeValue,l=t.toLowerCase(),i=l.indexOf(lo);if(i<0)return;
+    var frag=document.createDocumentFragment(),last=0;
+    while(i>=0){frag.appendChild(document.createTextNode(t.slice(last,i)));
+      var mk=document.createElement('mark');mk.className='hit';mk.textContent=t.slice(i,i+term.length);frag.appendChild(mk);hits.push(mk);
+      last=i+term.length;i=l.indexOf(lo,last);}
+    frag.appendChild(document.createTextNode(t.slice(last)));nd.parentNode.replaceChild(frag,nd);
+  });
+  info.textContent=hits.length?hits.length+' ผล':'ไม่พบ';if(hits.length)go(0);
+}
+function go(i){if(!hits.length)return;cur=(i+hits.length)%hits.length;
+  hits.forEach(function(h){h.style.outline='';});hits[cur].style.outline='2px solid #ea580c';
+  hits[cur].scrollIntoView({block:'center'});info.textContent=(cur+1)+'/'+hits.length;}
+var tm;q.addEventListener('input',function(){clearTimeout(tm);tm=setTimeout(runSearch,250);});
+q.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();go(cur+(e.shiftKey?-1:1));}if(e.key==='Escape'){q.value='';clearHits();q.blur();}});
+document.getElementById('snext').onclick=function(){go(cur+1);};
+document.getElementById('sprev').onclick=function(){go(cur-1);};
+document.addEventListener('keydown',function(e){
+  if(e.key==='/'&&!/INPUT|TEXTAREA/.test(document.activeElement.tagName)){e.preventDefault();q.focus();q.select();}
+  if(e.key==='Escape')closeMenus();
+});
+document.getElementById('totop').onclick=function(){window.scrollTo({top:0});};
+
+/* ---- Export PDF ---- */
+document.getElementById('btnPdf').onclick=function(){
+  clearHits();var old=document.title;document.title='คู่มือการใช้งาน SEMed Scanner';
+  var restore=function(){document.title=old;window.removeEventListener('afterprint',restore);};
+  window.addEventListener('afterprint',restore);window.print();setTimeout(restore,1500);
+};
+
+/* ---- Export Word (MHTML .doc) ---- */
+function b64utf8(s){var b=new TextEncoder().encode(s),r='';for(var i=0;i<b.length;i+=0x8000)r+=String.fromCharCode.apply(null,b.subarray(i,i+0x8000));return btoa(r);}
+function svgToPng(svg){return new Promise(function(res,rej){
+  var vb=svg.viewBox.baseVal,w=vb.width,h=vb.height;
+  var xml=new XMLSerializer().serializeToString(svg);
+  var img=new Image();
+  img.onload=function(){var c=document.createElement('canvas');c.width=w*2;c.height=h*2;var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+    res({w:w,h:h,data:c.toDataURL('image/png').split(',')[1]});};
+  img.onerror=rej;img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(xml);});}
+var FONT="'TH Sarabun New','Leelawadee UI',Tahoma,sans-serif";
+function style(el,css){el.setAttribute('style',(el.getAttribute('style')||'')+';'+css);}
+document.getElementById('btnDoc').onclick=async function(){
+  var btn=this;btn.disabled=true;var lbl=btn.textContent;btn.textContent='กำลังสร้างไฟล์…';
+  try{
+    clearHits();
+    var clone=manual.cloneNode(true);
+    clone.querySelectorAll('.no-print,.no-export,script,.cover').forEach(function(e){e.remove();});
+    /* images */
+    var svgs=manual.querySelectorAll('figure.fig svg'),cloneSvgs=clone.querySelectorAll('figure.fig svg'),parts=[];
+    for(var i=0;i<svgs.length;i++){
+      var png=await svgToPng(svgs[i]);var name='fig'+(i+1)+'.png';parts.push({name:name,data:png.data});
+      var im=document.createElement('img');im.setAttribute('src','file:///C:/'+name);im.setAttribute('width','600');im.setAttribute('height',Math.round(600*png.h/png.w));
+      cloneSvgs[i].parentNode.replaceChild(im,cloneSvgs[i]);
+    }
+    /* links -> plain text */
+    clone.querySelectorAll('a').forEach(function(a){a.replaceWith(document.createTextNode(a.textContent));});
+    /* chapters headings + page breaks */
+    clone.querySelectorAll('section.chapter').forEach(function(sec,idx){
+      var h2=sec.querySelector('h2');var num=h2.querySelector('.num').textContent;var title=h2.textContent.replace(num,'').trim();
+      var nh=document.createElement('h2');nh.textContent=(/^\d+$/.test(num)?'บทที่ '+num:'ภาคผนวก '+num)+' '+title;
+      style(nh,'font-family:'+FONT+';font-size:22pt;color:#3b3ec4;border-bottom:2px solid #4f52e8;page-break-before:always;margin:0 0 10pt 0');
+      h2.replaceWith(nh);
+    });
+    clone.querySelectorAll('h3').forEach(function(e){style(e,'font-family:'+FONT+';font-size:16pt;color:#3b3ec4;margin:14pt 0 4pt 0');});
+    clone.querySelectorAll('h4').forEach(function(e){style(e,'font-family:'+FONT+';font-size:14pt;margin:10pt 0 2pt 0');});
+    clone.querySelectorAll('p,li').forEach(function(e){style(e,'font-family:'+FONT+';font-size:14pt;line-height:1.3');});
+    clone.querySelectorAll('ol.steps').forEach(function(ol){ol.setAttribute('style','');var k=0;Array.prototype.forEach.call(ol.children,function(li){k++;li.insertAdjacentHTML('afterbegin','<b>'+k+'. </b>');style(li,'list-style:none;margin-left:0');});});
+    clone.querySelectorAll('table').forEach(function(t){t.setAttribute('border','1');t.setAttribute('cellspacing','0');t.setAttribute('cellpadding','5');style(t,'border-collapse:collapse;width:100%;border:1px solid #999');});
+    clone.querySelectorAll('th').forEach(function(e){style(e,'font-family:'+FONT+';font-size:13pt;background:#eef2ff;border:1px solid #999;text-align:left');});
+    clone.querySelectorAll('td').forEach(function(e){style(e,'font-family:'+FONT+';font-size:13pt;border:1px solid #999;vertical-align:top');});
+    clone.querySelectorAll('.box').forEach(function(b){
+      var col=b.classList.contains('tip')?['#059669','#ecfdf5']:b.classList.contains('warn')?['#d97706','#fffbeb']:b.classList.contains('danger')?['#dc2626','#fef2f2']:['#2563eb','#eff6ff'];
+      var t=document.createElement('table');t.setAttribute('width','100%');t.setAttribute('cellpadding','8');t.setAttribute('cellspacing','0');style(t,'border-collapse:collapse;border:none;border-left:5px solid '+col[0]+';background:'+col[1]+';margin:8pt 0');
+      var td=document.createElement('td');td.setAttribute('style','border:none;background:'+col[1]+';font-family:'+FONT+';font-size:13pt');td.innerHTML=b.innerHTML;
+      var tr=document.createElement('tr');tr.appendChild(td);var tb=document.createElement('tbody');tb.appendChild(tr);t.appendChild(tb);b.replaceWith(t);
+      td.querySelectorAll('b.t').forEach(function(x){style(x,'color:'+col[0]);});
+    });
+    clone.querySelectorAll('.ui').forEach(function(e){style(e,'font-weight:bold;color:#312e81;background:#eef2ff');});
+    clone.querySelectorAll('.perm').forEach(function(e){style(e,'font-family:Consolas,monospace;font-size:10pt;color:#475569;background:#f1f5f9');});
+    clone.querySelectorAll('code').forEach(function(e){style(e,'font-family:Consolas,monospace;background:#f1f5f9');});
+    clone.querySelectorAll('.req').forEach(function(e){style(e,'color:#dc2626;font-weight:bold');});
+    clone.querySelectorAll('figure.fig').forEach(function(f){style(f,'margin:8pt 0;text-align:center');});
+    clone.querySelectorAll('figcaption').forEach(function(f){
+      var ol=f.querySelector('ol');
+      if(ol){var arr=[];ol.querySelectorAll('li').forEach(function(li,k){arr.push((k+1)+') '+li.innerHTML);});var p=document.createElement('p');p.setAttribute('style','font-family:'+FONT+';font-size:12pt;text-align:left');p.innerHTML=arr.join(' &nbsp; ');ol.replaceWith(p);}
+      style(f,'font-family:'+FONT+';font-size:12pt;text-align:left');
+    });
+    clone.querySelectorAll('.simnote').forEach(function(e){style(e,'color:#b45309');});
+    /* cover + toc */
+    var cover='<div style="text-align:center;margin-top:160pt"><p style="font-family:'+FONT+';font-size:44pt;color:#3b3ec4;font-weight:bold">SEMed Scanner</p><p style="font-family:'+FONT+';font-size:22pt">คู่มือการใช้งานสำหรับเจ้าหน้าที่จุดตรวจและห้อง Lab</p><p style="font-family:'+FONT+';font-size:16pt;color:#555">เอกสารอ้างอิงแอปเวอร์ชัน 1.2.0 (ภาพประกอบเป็นภาพจำลอง)</p></div>';
+    var tocH='<h1 style="font-family:'+FONT+';font-size:24pt;page-break-before:always;color:#3b3ec4">สารบัญ</h1>';
+    manual.querySelectorAll('section.chapter').forEach(function(sec){tocH+='<p style="font-family:'+FONT+';font-size:14pt;margin:3pt 0">'+sec.getAttribute('data-label')+'</p>';});
+    var html='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>คู่มือการใช้งาน SEMed Scanner</title>'+
+      '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->'+
+      '<style>@page{size:21cm 29.7cm;margin:2cm 1.8cm}body{font-family:'+FONT+';font-size:14pt}</style></head><body>'+cover+tocH+clone.innerHTML+'</body></html>';
+    var B='----=_NextPart_semed_manual';
+    var m='MIME-Version: 1.0\r\nContent-Type: multipart/related; boundary="'+B+'"; type="text/html"\r\n\r\n';
+    m+='--'+B+'\r\nContent-Type: text/html; charset="utf-8"\r\nContent-Transfer-Encoding: base64\r\nContent-Location: file:///C:/manual.htm\r\n\r\n'+b64utf8(html).replace(/(.{76})/g,'$1\r\n')+'\r\n\r\n';
+    parts.forEach(function(p){m+='--'+B+'\r\nContent-Type: image/png\r\nContent-Transfer-Encoding: base64\r\nContent-Location: file:///C:/'+p.name+'\r\n\r\n'+p.data.replace(/(.{76})/g,'$1\r\n')+'\r\n\r\n';});
+    m+='--'+B+'--\r\n';
+    var blob=new Blob([m],{type:'application/msword'});var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download='คู่มือการใช้งาน-SEMed-Scanner.doc';document.body.appendChild(a);a.click();a.remove();
+  }catch(err){alert('สร้างไฟล์ Word ไม่สำเร็จ: '+err.message);}
+  btn.disabled=false;btn.textContent=lbl;
+};
+})();
+</script>
+</body>
+</html>
