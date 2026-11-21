@@ -11,6 +11,9 @@ const envConfig = {
   // API
   apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3000',
 
+  // Web (หน้าเว็บ ไม่ใช่ API) — ใช้เปิดหน้า CAPTCHA
+  webBaseUrl: (process.env.WEB_BASE_URL || '').trim().replace(/\/+$/, ''),
+
   // Notification
   enableSound: process.env.ENABLE_SOUND === 'true'
 }
@@ -22,6 +25,13 @@ const envConfig = {
 function getApiBaseUrl() {
   const storeConfig = getStoreConfig()
   return storeConfig.baseUrl || envConfig.apiBaseUrl
+}
+
+/**
+ * ดึงค่า Web Base URL (โดเมนหน้าเว็บ ใช้เปิดหน้า CAPTCHA) — คืน '' ถ้าไม่ได้ตั้ง
+ */
+function getWebBaseUrl() {
+  return envConfig.webBaseUrl
 }
 
 /**
@@ -48,6 +58,7 @@ function getMergedConfig() {
 
 module.exports = {
   getApiBaseUrl,
+  getWebBaseUrl,
   isSoundEnabled,
   getMergedConfig
 }

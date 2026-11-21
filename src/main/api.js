@@ -57,14 +57,14 @@ api.interceptors.response.use(
  * @param {boolean} rememberMe - จดจำการเข้าสู่ระบบ
  * @returns {Promise}
  */
-async function login(email, password, rememberMe = false) {
+async function login(email, password, rememberMe = false, turnstileToken = null) {
   const baseUrl = getApiBaseUrl()
-  
-  const response = await api.post('/auth/login', {
-    email,
-    password,
-    rememberMe
-  }, {
+
+  const body = { email, password, rememberMe }
+  // captcha=off → ไม่ส่ง turnstileToken
+  if (turnstileToken) body.turnstileToken = turnstileToken
+
+  const response = await api.post('/auth/login', body, {
     baseURL: baseUrl // ใช้ baseUrl จาก config ก่อน login
   })
   

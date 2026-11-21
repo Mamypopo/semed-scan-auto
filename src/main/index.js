@@ -7,7 +7,7 @@ const { showNotification } = require('./notifier')
 
 const { saveConfig, clearConfig, getStationIds, getCnGroupId, getScanInputMode, getWorkflowMode } = require('./store')
 const { playSound } = require('./sound')
-const { getMergedConfig, isSoundEnabled, getApiBaseUrl } = require('./config')
+const { getMergedConfig, isSoundEnabled, getApiBaseUrl, getWebBaseUrl } = require('./config')
 const { login, getStations, getCNGroups, sendScanData, cancelScan, verifyToken, lookupPatient, getRemarkReasons, createStationRemark, deleteStationRemark, recheckCheckpoint, cancelRecheck, getRecheckSummary } = require('./api')
 
 let mainWindow
@@ -446,11 +446,122 @@ ipcMain.handle('config:clear', async () => {
   return { success: true }
 })
 
+// ==========================================
+// CAPTCHA (Cloudflare Turnstile) — modal window ไปหน้าเว็บ /captcha-window
+// ==========================================
+
+let captchaInFlight = null
+
+/**
+ * เปิด modal หน้า CAPTCHA แล้วรอผลจาก query string ของ URL
+ * @returns {Promise<{ status: 'token', token: string } | { status: 'off' } | { status: 'cancelled' } | { status: 'error', message: string }>}
+ */
+function requestCaptchaToken() {
+  // กันเปิดซ้อนหลายหน้าต่าง
+  if (captchaInFlight) return captchaInFlight
+
+  const webBaseUrl = getWebBaseUrl()
+  let webOrigin
+  try {
+    webOrigin = new URL(webBaseUrl).origin
+  } catch {
+    sendLog('error', 'ไม่ได้ตั้งค่า WEB_BASE_URL หรือค่าไม่ถูกต้อง', webBaseUrl || '(ว่าง)')
+    return Promise.resolve({ status: 'error', message: 'ไม่ได้ตั้งค่า WEB_BASE_URL สำหรับหน้า CAPTCHA กรุณาติดต่อผู้ดูแลระบบ' })
+  }
+
+  captchaInFlight = new Promise((resolve) => {
+    const captchaWindow = new BrowserWindow({
+      width: 420,
+      height: 560,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        partition: 'captcha' // ไม่มี persist: → อยู่ในหน่วยความจำ แยกจาก session หลักและ SSO
+      },
+      parent: mainWindow,
+      modal: true,
+      title: 'ยืนยันตัวตน',
+      autoHideMenuBar: true
+    })
+    captchaWindow.setMenu(null)
+    // ไม่ให้หน้า CAPTCHA เปิดหน้าต่างใหม่
+    captchaWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+
+    let resolved = false
+    const finish = (result) => {
+      if (resolved) return
+      resolved = true
+      captchaInFlight = null
+      if (!captchaWindow.isDestroyed()) captchaWindow.close()
+      resolve(result)
+    }
+
+    // คืน true ถ้า URL นี้คือผลลัพธ์ของ CAPTCHA (จาก origin ที่เชื่อถือได้เท่านั้น)
+    const checkUrl = (url) => {
+      let u
+      try { u = new URL(url) } catch { return false }
+      if (u.origin !== webOrigin) return false
+
+      const turnstileToken = u.searchParams.get('turnstileToken')
+      if (turnstileToken) {
+        sendLog('info', 'ยืนยัน CAPTCHA สำเร็จ') // ห้าม log ค่า token
+        finish({ status: 'token', token: turnstileToken })
+        return true
+      }
+      if (u.searchParams.get('captcha') === 'off') {
+        sendLog('info', 'CAPTCHA ปิดอยู่ — login โดยไม่ใช้ token')
+        finish({ status: 'off' })
+        return true
+      }
+      return false
+    }
+
+    const onNav = (event, url) => {
+      if (checkUrl(url)) event.preventDefault()
+    }
+    captchaWindow.webContents.on('will-redirect', onNav)
+    captchaWindow.webContents.on('will-navigate', onNav)
+    captchaWindow.webContents.on('did-navigate', (_, url) => checkUrl(url))
+    captchaWindow.webContents.on('did-fail-load', (_, code, desc, _url, isMainFrame) => {
+      // -3 = ERR_ABORTED (เกิดจาก preventDefault ของเราเอง), ไม่สนใจ subframe
+      if (!isMainFrame || code === -3 || resolved) return
+      sendLog('error', `หน้า CAPTCHA โหลดไม่ได้ (${code})`, desc)
+      finish({ status: 'error', message: `โหลดหน้ายืนยันตัวตนไม่ได้ (${desc})` })
+    })
+    captchaWindow.on('closed', () => finish({ status: 'cancelled' }))
+
+    const captchaUrl = `${webBaseUrl}/captcha-window`
+    sendLog('info', 'เปิดหน้ายืนยันตัวตน (CAPTCHA)', captchaUrl)
+    captchaWindow.loadURL(captchaUrl)
+  })
+
+  return captchaInFlight
+}
+
+function isCaptchaFailed(error) {
+  const data = error?.response?.data
+  return error?.response?.status === 400 &&
+    (data?.code === 'CAPTCHA_FAILED' || data?.error === 'CAPTCHA_FAILED' || data?.message === 'CAPTCHA_FAILED')
+}
+
 ipcMain.handle('auth:login', async (event, { email, password, rememberMe }) => {
   const baseUrl = getApiBaseUrl()
+
+  // 1) ขอ CAPTCHA token ใหม่ทุกครั้ง (token ใช้ได้ครั้งเดียว)
+  const captcha = await requestCaptchaToken()
+  if (captcha.status === 'cancelled') {
+    sendLog('warn', 'ยกเลิกการเข้าสู่ระบบ (ปิดหน้ายืนยันตัวตน)')
+    return { success: false, cancelled: true, message: 'ยกเลิกการเข้าสู่ระบบ' }
+  }
+  if (captcha.status === 'error') {
+    return { success: false, message: captcha.message }
+  }
+  const turnstileToken = captcha.status === 'token' ? captcha.token : null
+
+  // 2) ส่ง login พร้อม token
   sendLog('info', `Login: ${email}`, `API: ${baseUrl}`)
   try {
-    const result = await login(email, password, rememberMe)
+    const result = await login(email, password, rememberMe, turnstileToken)
     const returnValue = JSON.parse(JSON.stringify(result))
     if (returnValue.success !== false) {
       sendLog('success', `Login สำเร็จ: ${result.data?.user?.name || email}`)
@@ -463,6 +574,14 @@ ipcMain.handle('auth:login', async (event, { email, password, rememberMe }) => {
     const apiMsg = error.response?.data?.message || error.response?.data?.error
     const errMsg = apiMsg || error.message
     sendLog('error', `Login Error${status ? ` (${status})` : ''}`, `${errMsg}\n${baseUrl}/auth/login\n${JSON.stringify(error.response?.data || {})}`)
+    if (isCaptchaFailed(error)) {
+      // token ถูกใช้ไปแล้ว — กด login ครั้งถัดไปจะเปิด modal ขอ token ใหม่เสมอ
+      return {
+        success: false,
+        captchaFailed: true,
+        message: 'ยืนยันตัวตนไม่สำเร็จ กรุณากดเข้าสู่ระบบเพื่อยืนยันใหม่อีกครั้ง'
+      }
+    }
     return {
       success: false,
       message: errMsg

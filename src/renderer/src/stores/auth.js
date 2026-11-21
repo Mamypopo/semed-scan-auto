@@ -111,13 +111,18 @@ export const useAuthStore = defineStore('auth', () => {
         })
 
         return { success: true }
+      } else if (result.cancelled) {
+        // ผู้ใช้ปิดหน้ายืนยันตัวตนเอง — ยกเลิกเงียบๆ
+        return { success: false, cancelled: true }
       } else {
-        throw new Error(result.message || 'เข้าสู่ระบบไม่สำเร็จ')
+        const err = new Error(result.message || 'เข้าสู่ระบบไม่สำเร็จ')
+        err.captchaFailed = !!result.captchaFailed
+        throw err
       }
     } catch (error) {
       Swal.fire({
         icon: 'error',
-        title: 'เข้าสู่ระบบไม่สำเร็จ',
+        title: error.captchaFailed ? 'ยืนยันตัวตนไม่สำเร็จ' : 'เข้าสู่ระบบไม่สำเร็จ',
         text: error.message || 'กรุณาตรวจสอบอีเมลและรหัสผ่าน',
         customClass: { popup: 'swal-app' }
       })
