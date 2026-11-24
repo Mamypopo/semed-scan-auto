@@ -12,7 +12,8 @@ const envConfig = {
   apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3000',
 
   // Web (หน้าเว็บ ไม่ใช่ API) — ใช้เปิดหน้า CAPTCHA
-  webBaseUrl: (process.env.WEB_BASE_URL || '').trim().replace(/\/+$/, ''),
+  // ตัด / ท้าย และ /captcha-window ที่เผลอใส่มา (โค้ดเติม path ให้เอง)
+  webBaseUrl: (process.env.WEB_BASE_URL || '').trim().replace(/\/+$/, '').replace(/\/captcha-window$/, ''),
 
   // Notification
   enableSound: process.env.ENABLE_SOUND === 'true'
