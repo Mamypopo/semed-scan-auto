@@ -7,11 +7,23 @@ const { showNotification } = require('./notifier')
 
 const { saveConfig, clearConfig, getStationIds, getCnGroupId, getScanInputMode, getWorkflowMode } = require('./store')
 const { playSound } = require('./sound')
+const { recheckWithRetry, isTimeoutError } = require('./recheck-retry')
+const { attachTiming } = require('./request-timing')
 const { getMergedConfig, isSoundEnabled, getApiBaseUrl, getWebBaseUrl } = require('./config')
-const { login, getStations, getCNGroups, sendScanData, cancelScan, verifyToken, lookupPatient, getRemarkReasons, createStationRemark, deleteStationRemark, recheckCheckpoint, cancelRecheck, getRecheckSummary } = require('./api')
+const { api, login, getStations, getCNGroups, sendScanData, cancelScan, verifyToken, lookupPatient, getRemarkReasons, createStationRemark, deleteStationRemark, recheckCheckpoint, cancelRecheck, getRecheckSummary } = require('./api')
 
 let mainWindow
 let scannerWorker
+
+// log request ที่ช้าเกิน 3 วิ หรือ timeout — ไว้เทียบเวลากับ log ฝั่ง server (request ปกติไม่ log)
+const SLOW_REQUEST_MS = 3000
+attachTiming(api, {
+  thresholdMs: SLOW_REQUEST_MS,
+  onSlow: ({ method, url, ms, status, timedOut }) => {
+    const tag = timedOut ? ' (timeout)' : status ? ` [${status}]` : ''
+    sendLog('warn', `⏱ ${method} ${url} ${ms.toLocaleString()}ms${tag}`)
+  }
+})
 
 function sendLog(level, message, detail = null) {
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -252,11 +264,19 @@ async function handleRecheckScan(barcode) {
 
   // ทุกเคส reject ตอบ 400 เสมอแล้ว (backend บันทึกเป็น RecheckException ให้เองอัตโนมัติ
   // ไม่ต้องถามผู้ใช้ต่อ ไม่มี lab-create อีกแล้ว) เลยแค่ try/catch ธรรมดา
+  //
+  // timeout: server อาจบันทึกไปแล้ว — ยิงซ้ำปลอดภัย (server ตอบ isNewRecheck: false
+  // "recheck แล้ว …" ไม่นับยอดซ้ำ) จึงยิงซ้ำอัตโนมัติ 1 ครั้งแล้วแสดงผลตามคำตอบนั้น
   try {
-    const result = await recheckCheckpoint(barcode, cnGroupId)
+    const result = await recheckWithRetry(
+      () => recheckCheckpoint(barcode, cnGroupId),
+      { onRetry: () => sendLog('warn', 'Recheck timeout — ยิงซ้ำอัตโนมัติ 1 ครั้ง', barcode) }
+    )
     notifyRecheckResult(result, barcode)
   } catch (error) {
-    const message = error.response?.data?.message || error.message
+    const message = isTimeoutError(error)
+      ? 'server ตอบช้าเกินไป (ลองซ้ำแล้ว) รายการนี้อาจบันทึกแล้ว กรุณายิงซ้ำเพื่อตรวจสอบ'
+      : error.response?.data?.message || error.message
     notifyRecheckError(message)
   }
 }
@@ -734,7 +754,10 @@ ipcMain.handle('recheck:summary', async (event, cnGroupId) => {
     const result = await getRecheckSummary(cnGroupId)
     return JSON.parse(JSON.stringify(result))
   } catch (error) {
-    return { success: false, message: error.response?.data?.message || error.message }
+    const status = error.response?.status
+    const message = error.response?.data?.message || error.message
+    sendLog('warn', `โหลดสรุป recheck ไม่สำเร็จ${status ? ` (${status})` : ''}`, message)
+    return { success: false, message }
   }
 })
 

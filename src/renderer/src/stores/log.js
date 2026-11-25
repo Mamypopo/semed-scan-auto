@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
+// เก็บแค่รายการล่าสุด กันหน่วยความจำโตเรื่อยๆ ตอนเปิดแอปทิ้งไว้ทั้งวัน
+const MAX_ENTRIES = 500
+
 export const useLogStore = defineStore('log', () => {
   const entries = ref([])
 
@@ -16,6 +19,7 @@ export const useLogStore = defineStore('log', () => {
         : null,
       time: new Date()
     })
+    if (entries.value.length > MAX_ENTRIES) entries.value.length = MAX_ENTRIES
   }
 
   function clear() { entries.value = [] }

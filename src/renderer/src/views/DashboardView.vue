@@ -634,8 +634,22 @@
 
       <!-- Recheck summary -->
       <div class="card">
-        <p class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest mb-2">สรุป CNGroup นี้</p>
-        <div v-if="recheckStore.isLoadingSummary" class="grid grid-cols-3 gap-2">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-[10px] font-semibold text-zinc-400 uppercase tracking-widest">สรุป CNGroup นี้</p>
+          <button
+            type="button"
+            @click="recheckStore.refreshSummaryNow()"
+            :disabled="!authStore.hasCNGroup || recheckStore.isLoadingSummary"
+            class="flex items-center gap-1 text-[10px] font-medium text-zinc-400 hover:text-zinc-600 transition-colors disabled:opacity-50"
+            title="ดึงยอดล่าสุด"
+          >
+            <svg class="w-3 h-3" :class="{ 'animate-spin': recheckStore.isLoadingSummary }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            รีเฟรช
+          </button>
+        </div>
+        <div v-if="recheckStore.isLoadingSummary && !recheckStore.hasLoadedSummary" class="grid grid-cols-3 gap-2">
           <div v-for="n in 3" :key="n" class="h-12 bg-zinc-100 animate-pulse rounded-xl"></div>
         </div>
         <div v-else class="grid grid-cols-3 gap-2">
@@ -820,6 +834,7 @@ async function confirmChangeWorkflowMode() {
 watch(() => authStore.selectedCNGroup?.id, (id) => {
   if (!authStore.isRecheckMode) return
   if (id) {
+    recheckStore.resetSummary() // ไม่โชว์ยอดของ CNGroup เดิมค้างไว้
     recheckStore.loadSummary(id)
   } else {
     recheckStore.resetSummary()

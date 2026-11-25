@@ -1,6 +1,6 @@
 {
   "name": "semed-scanner",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "main": "src/main/index.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:renderer\" \"wait-on http://localhost:5173 && npm run dev:electron\"",
@@ -8,7 +8,8 @@
     "dev:electron": "set NODE_ENV=development&& electron . --dev",
     "build": "cd src/renderer && npm run build && cd ../.. && electron-builder",
     "build:win": "npm run build -- --win",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "test": "node --test \"test/*.test.js\" && cd src/renderer && npm test"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
