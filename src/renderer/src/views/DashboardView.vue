@@ -650,32 +650,54 @@
           </button>
         </div>
         <div v-if="recheckStore.isLoadingSummary && !recheckStore.hasLoadedSummary" class="grid grid-cols-3 gap-2">
-          <div v-for="n in 3" :key="n" class="h-12 bg-zinc-100 animate-pulse rounded-xl"></div>
+          <div v-for="n in 3" :key="n" class="h-[76px] bg-zinc-100 animate-pulse rounded-xl"></div>
         </div>
-        <div v-else class="grid grid-cols-3 gap-2">
-          <div class="px-3 py-2.5 rounded-xl" style="background:#eef2ff; border:1px solid #c7d2fe;">
-            <p class="text-[10px] font-medium" style="color:#4338ca;">ทั้งหมด</p>
-            <p class="text-lg font-bold" style="color:#4338ca;">{{ recheckStore.summary.totalPatients }}</p>
+        <template v-else>
+          <!-- ค้างตรวจสอบ: ต้องไปจัดการที่หน้าเว็บ Lab Recheck (scanner จัดการเองไม่ได้) -->
+          <div v-if="summaryView.needsReview > 0" role="alert"
+            class="mb-2 px-3 py-2 rounded-xl text-xs flex items-start gap-2"
+            style="background:#fef2f2; border:1px solid #fecaca; color:#b91c1c;">
+            <svg class="w-3.5 h-3.5 shrink-0 mt-px" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            </svg>
+            <span><span class="font-semibold">ค้างตรวจสอบ {{ summaryView.needsReview }} รายการ</span> ต้องจัดการที่หน้าเว็บ Lab Recheck</span>
           </div>
-          <div class="px-3 py-2.5 rounded-xl" style="background:#fffbeb; border:1px solid #fde68a;">
-            <p class="text-[10px] font-medium" style="color:#92400e;">รอเช็ค</p>
-            <p class="text-lg font-bold" style="color:#92400e;">{{ recheckStore.summary.awaitingReceiveCount }}</p>
+
+          <!-- ตัวเลขหลัก = ตัวอย่าง, ตัวรอง = คน (เหมือนหน้าเว็บ) -->
+          <div class="grid grid-cols-3 gap-2">
+            <div v-for="c in summaryCards" :key="c.key" class="px-3 py-2.5 rounded-xl"
+              :style="`background:${c.bg}; border:1px solid ${c.border};`">
+              <p class="text-[10px] font-medium" :style="`color:${c.fg};`">{{ c.label }}</p>
+              <p class="mt-0.5 leading-none" :style="`color:${c.fg};`">
+                <span class="text-lg font-bold tabular-nums">{{ c.samples }}</span>
+                <span class="text-[10px] font-medium ml-1 opacity-80">ตัวอย่าง</span>
+              </p>
+              <p v-if="c.patients != null" class="mt-1 text-[10px] tabular-nums" :style="`color:${c.fg}; opacity:0.75;`">
+                {{ c.patients }} คน
+              </p>
+            </div>
           </div>
-          <div class="px-3 py-2.5 rounded-xl" style="background:#f0fdf4; border:1px solid #bbf7d0;">
-            <p class="text-[10px] font-medium" style="color:#15803d;">Lab รับแล้ว</p>
-            <p class="text-lg font-bold" style="color:#15803d;">{{ recheckStore.summary.receivedCount }}</p>
-          </div>
-        </div>
-        <div v-if="recheckStore.summary.stations?.length" class="mt-2 space-y-1 max-h-40 overflow-y-auto">
-          <div v-for="st in recheckStore.summary.stations" :key="st.stationId"
-            class="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs"
-            style="background:#fafafa; border:1px solid rgba(9,9,11,0.06);">
-            <span class="text-zinc-600 truncate">{{ st.stationName }}</span>
-            <span class="font-semibold shrink-0 ml-2" :style="st.awaitingReceive === 0 ? 'color:#15803d;' : 'color:#92400e;'">
-              {{ st.awaitingReceive === 0 ? 'ครบ' : `รอ ${st.awaitingReceive}` }} / {{ st.total }}
-            </span>
-          </div>
-        </div>
+        </template>
+
+        <!-- รายจุดตรวจ: แถบ = สัดส่วนที่ Lab รับแล้ว -->
+        <ul v-if="summaryView.stations.length" class="mt-2 space-y-1 max-h-48 overflow-y-auto">
+          <li v-for="st in summaryView.stations" :key="st.id"
+            class="px-2.5 py-2 rounded-lg text-xs"
+            :style="st.tone === 'review' ? 'background:#fef2f2; border:1px solid #fecaca;' : 'background:#fafafa; border:1px solid rgba(9,9,11,0.06);'">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-zinc-600 truncate">{{ st.name }}</span>
+              <span class="font-semibold shrink-0 tabular-nums" :style="`color:${stationTone[st.tone].fg};`">{{ st.label }}</span>
+            </div>
+            <div class="mt-1.5 h-1 rounded-full overflow-hidden" style="background:rgba(9,9,11,0.06);"
+              role="progressbar" :aria-valuenow="st.progress" aria-valuemin="0" aria-valuemax="100"
+              :aria-label="`${st.name} Lab รับแล้ว ${st.progress}%`">
+              <div class="h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none"
+                :style="`width:${st.progress}%; background:${stationTone[st.tone].bar};`"></div>
+            </div>
+            <p v-if="st.needsReview > 0" class="mt-1 text-[10px] font-medium" style="color:#b91c1c;">ค้างตรวจสอบ {{ st.needsReview }}</p>
+            <p v-if="st.awaitingRegistration > 0" class="mt-1 text-[10px]" style="color:#92400e;">ในนี้รอทะเบียนบันทึกการยิง {{ st.awaitingRegistration }}</p>
+          </li>
+        </ul>
       </div>
 
       <!-- Recheck history -->
@@ -772,11 +794,28 @@ import { useAuthStore } from '../stores/auth'
 import { useScannerStore } from '../stores/scanner'
 import { useLogStore } from '../stores/log'
 import { useRecheckStore } from '../stores/recheck'
+import { buildSummaryView } from '../utils/recheckSummary'
 
 const authStore = useAuthStore()
 const scannerStore = useScannerStore()
 const logStore = useLogStore()
 const recheckStore = useRecheckStore()
+const summaryView = computed(() => buildSummaryView(recheckStore.summary))
+// สีชุดเดิมของการ์ดสรุป (indigo / amber / green)
+const summaryCards = computed(() => {
+  const v = summaryView.value
+  const p = v.patients
+  return [
+    { key: 'total', label: 'ทั้งหมด', samples: v.total, patients: p?.total, fg: '#4338ca', bg: '#eef2ff', border: '#c7d2fe' },
+    { key: 'awaiting', label: 'รอเช็ค', samples: v.awaiting, patients: p?.awaiting, fg: '#92400e', bg: '#fffbeb', border: '#fde68a' },
+    { key: 'received', label: 'Lab รับแล้ว', samples: v.received, patients: p?.received, fg: '#15803d', bg: '#f0fdf4', border: '#bbf7d0' }
+  ]
+})
+const stationTone = {
+  done: { fg: '#15803d', bar: '#22c55e' },
+  waiting: { fg: '#92400e', bar: '#f59e0b' },
+  review: { fg: '#b91c1c', bar: '#ef4444' }
+}
 
 const recheckBarcode = ref('')
 const recheckInputRef = ref(null)

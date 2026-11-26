@@ -7,7 +7,8 @@ const { showNotification } = require('./notifier')
 
 const { saveConfig, clearConfig, getStationIds, getCnGroupId, getScanInputMode, getWorkflowMode } = require('./store')
 const { playSound } = require('./sound')
-const { recheckWithRetry, isTimeoutError } = require('./recheck-retry')
+const { recheckWithRetry } = require('./recheck-retry')
+const { recheckErrorMessage } = require('./recheck-message')
 const { attachTiming } = require('./request-timing')
 const { getMergedConfig, isSoundEnabled, getApiBaseUrl, getWebBaseUrl } = require('./config')
 const { api, login, getStations, getCNGroups, sendScanData, cancelScan, verifyToken, lookupPatient, getRemarkReasons, createStationRemark, deleteStationRemark, recheckCheckpoint, cancelRecheck, getRecheckSummary } = require('./api')
@@ -274,10 +275,7 @@ async function handleRecheckScan(barcode) {
     )
     notifyRecheckResult(result, barcode)
   } catch (error) {
-    const message = isTimeoutError(error)
-      ? 'server ตอบช้าเกินไป (ลองซ้ำแล้ว) รายการนี้อาจบันทึกแล้ว กรุณายิงซ้ำเพื่อตรวจสอบ'
-      : error.response?.data?.message || error.message
-    notifyRecheckError(message)
+    notifyRecheckError(recheckErrorMessage(error))
   }
 }
 
