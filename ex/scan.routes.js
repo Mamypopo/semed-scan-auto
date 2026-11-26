@@ -86,9 +86,23 @@ router.post(
 // Recheck
 router.post("/recheck", authenticateToken, requirePermission(PERMISSIONS.SCAN_CREATE), scanController.recheckCheckpoint);
 router.delete("/recheck/:id", authenticateToken, requirePermission(PERMISSIONS.SCAN_UPDATE), scanController.cancelRecheck);
+router.post("/recheck/cancel-unbacked-receipt/bulk", authenticateToken, requirePermission(PERMISSIONS.SCAN_UPDATE), scanController.bulkCancelUnbackedReceipts);
+router.post("/recheck/cancel-unbacked-receipt", authenticateToken, requirePermission(PERMISSIONS.SCAN_UPDATE), scanController.cancelUnbackedReceipt);
+router.get("/recheck/lab-stations", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getLabStations);
 router.get("/recheck/summary", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getRecheckSummary);
 router.get("/recheck/station-patients", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getRecheckStationPatients);
 router.get("/recheck/exceptions", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getRecheckExceptions);
+// ต้องมาก่อน /:id ไม่งั้น "bulk" จะถูกจับเป็น id
+router.patch("/recheck/exceptions/bulk", authenticateToken, requirePermission(PERMISSIONS.SCAN_UPDATE), scanController.bulkResolveRecheckExceptions);
 router.patch("/recheck/exceptions/:id", authenticateToken, requirePermission(PERMISSIONS.SCAN_UPDATE), scanController.resolveRecheckException);
+
+// งานที่ Lab ส่งมาขอให้ทะเบียนดำเนินการ (ตัวอย่างมาถึงแล้วแต่หน้างานลืมยิง)
+router.post("/recheck/request-registration-scan", authenticateToken, requirePermission(PERMISSIONS.SCAN_UPDATE), scanController.requestRegistrationScan);
+router.get("/registration-tasks/summary", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getRegistrationTaskSummary);
+router.get("/registration-tasks", authenticateToken, requirePermission(PERMISSIONS.SCAN_READ), scanController.getRegistrationTasks);
+router.post("/registration-tasks/bulk-confirm", authenticateToken, requirePermission(PERMISSIONS.SCAN_CREATE), scanController.bulkConfirmRegistrationTasks);
+router.post("/registration-tasks/bulk-reject", authenticateToken, requirePermission(PERMISSIONS.SCAN_UPDATE), scanController.bulkRejectRegistrationTasks);
+router.post("/registration-tasks/:id/confirm", authenticateToken, requirePermission(PERMISSIONS.SCAN_CREATE), scanController.confirmRegistrationTask);
+router.post("/registration-tasks/:id/reject", authenticateToken, requirePermission(PERMISSIONS.SCAN_UPDATE), scanController.rejectRegistrationTask);
 
 export default router;

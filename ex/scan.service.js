@@ -1,6 +1,16 @@
 import { prisma } from "../config/db.js";
 import { Prisma } from "@prisma/client";
 import { createRecheckException, autoResolveMatchingExceptions } from "./recheck-exception.service.js";
+import {
+  slotKey,
+  getActiveConfirmation,
+  confirmRecheck,
+  cancelConfirmation,
+  getConfirmationsForCNGroup,
+  syncRecheckConflicts,
+} from "./recheck-confirmation.service.js";
+import { hasPendingRegistrationRequest, getPendingRequestKeys, getUnbackedReceipts } from "./registration-task.service.js";
+import { withRegistrationLock } from "./scan-slot-lock.js";
 
 /**
  * สแกนจุดตรวจ (ใช้ CN.STATION_ID)
@@ -161,150 +171,180 @@ export const scanCheckpoint = async (data) => {
       };
     }
 
-    // ดึงข้อมูล scan items + หมายเหตุจุดตรวจ (ถ้ามี) ในครั้งเดียว — ไม่เพิ่ม round-trip
-    const [allPatientScans, stationRemark] = await Promise.all([
-      prisma.scanItem.findMany({
-        where: {
-          patientId: membership.patientId,
-          stationId: finalStationId,
-          registrationId: registration.id,
-        },
-        select: {
-          id: true,
-          scannedAt: true,
-          isCancelled: true,
-          cancelledAt: true,
-          scannedByUser: {
-            select: {
-              id: true,
-              name: true,
+    // เช็ค+สร้าง ScanItem ต้องเรียงคิวทีละคำขอต่อ registration เดียวกัน กัน 2 คำขอเห็น
+    // "ยังไม่มี" พร้อมกันแล้วสร้างซ้ำ (ดู scan-slot-lock.js) — คนไข้คนอื่นไม่ต้องรอกันเลย
+    return await withRegistrationLock(registration.id, async () => {
+      // ดึงข้อมูล scan items + หมายเหตุจุดตรวจ (ถ้ามี) ในครั้งเดียว — ไม่เพิ่ม round-trip
+      const [allPatientScans, stationRemark] = await Promise.all([
+        prisma.scanItem.findMany({
+          where: {
+            patientId: membership.patientId,
+            stationId: finalStationId,
+            registrationId: registration.id,
+          },
+          select: {
+            id: true,
+            scannedAt: true,
+            isCancelled: true,
+            cancelledAt: true,
+            scannedByUser: {
+              select: {
+                id: true,
+                name: true,
+              },
             },
           },
-        },
-      }),
-      prisma.stationRemark.findUnique({
-        where: {
-          patientCNGroupId_stationId: {
-            patientCNGroupId: membership.id,
-            stationId: finalStationId,
+        }),
+        prisma.stationRemark.findUnique({
+          where: {
+            patientCNGroupId_stationId: {
+              patientCNGroupId: membership.id,
+              stationId: finalStationId,
+            },
           },
-        },
-        select: {
-          id: true,
-          remark: true,
-          reason: { select: { id: true, title: true } },
-        },
-      }),
-    ]);
+          select: {
+            id: true,
+            remark: true,
+            reason: { select: { id: true, title: true } },
+          },
+        }),
+      ]);
 
-    // scan ที่ยัง active (ไม่ถูกยกเลิก) ของ patient+station+registration นี้ — derive จาก allPatientScans แทนการ query ซ้ำ
-    const existingScan = allPatientScans.find((scan) => !scan.isCancelled) || null;
+      // scan ที่ยัง active (ไม่ถูกยกเลิก) ของ patient+station+registration นี้ — derive จาก allPatientScans แทนการ query ซ้ำ
+      const existingScan = allPatientScans.find((scan) => !scan.isCancelled) || null;
 
-    // ถ้ามีหมายเหตุจุดตรวจ และยังไม่ได้ยืนยัน → return ก่อนบันทึก scan
-    if (!existingScan && stationRemark && !deleteRemark) {
+      // ถ้ามีหมายเหตุจุดตรวจ และยังไม่ได้ยืนยัน → return ก่อนบันทึก scan
+      if (!existingScan && stationRemark && !deleteRemark) {
+        return {
+          success: true,
+          scanRecorded: false,
+          hasStationRemark: true,
+          stationRemark,
+          patient: membership.patient,
+          membership,
+          station,
+          registration,
+        };
+      }
+
+      let scanItem,
+        isNewScan = true,
+        statusMessage = "",
+        wasReinstated = false,
+        lostRace = null;
+
+      if (existingScan) {
+        scanItem = existingScan;
+        isNewScan = false;
+        const scannerName = existingScan.scannedByUser?.name || "ไม่ระบุ";
+        statusMessage = `ผู้ป่วยได้รับการตรวจที่จุดตรวจนี้แล้ว เมื่อ ${new Date(
+          existingScan.scannedAt
+        ).toLocaleString("th-TH")} โดย ${scannerName}`;
+      } else {
+        const cancelledScan = allPatientScans
+          .filter((scan) => scan.isCancelled)
+          .sort((a, b) => new Date(b.cancelledAt) - new Date(a.cancelledAt))[0];
+
+        // คิวในหน่วยความจำ (withRegistrationLock) กันได้แค่คำขอที่ตก instance เดียวกัน — ถ้าคำขอซ้ำไปตก
+        // คนละ instance จะหลุดมาถึงตรงนี้ทั้งคู่ ตัวกันจริงคือ partial unique index
+        // "ScanItem_active_slot_key" (สร้างด้วย SQL ตรง ไม่อยู่ใน schema.prisma) ชน = มีคนยิง slot นี้ไปแล้ว
+        scanItem = await prisma.scanItem.create({
+          data: {
+            patientId: membership.patientId,
+            registrationId: registration.id,
+            stationId: finalStationId,
+            scannedBy: userId ? parseInt(userId) : null,
+            isSpecialStation: station.isSpecial,
+            specialType: station.specialType,
+            scanType,
+            doctorVisit: station.requiresDoctorVisit ? doctorVisit : null,
+          },
+          include: {
+            scannedByUser: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            patient: {
+              select: {
+                id: true,
+                hn: true,
+                first_name: true,
+                last_name: true,
+              },
+            },
+            station: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        }).catch(async (error) => {
+          if (error.code !== "P2002") throw error;
+          lostRace = await prisma.scanItem.findFirst({
+            where: {
+              patientId: membership.patientId,
+              stationId: finalStationId,
+              registrationId: registration.id,
+              isCancelled: false,
+            },
+            select: {
+              id: true,
+              scannedAt: true,
+              scannedByUser: { select: { id: true, name: true } },
+            },
+          });
+          if (!lostRace) throw error;
+          return lostRace;
+        });
+
+        if (lostRace) {
+          isNewScan = false;
+          statusMessage = `ผู้ป่วยได้รับการตรวจที่จุดตรวจนี้แล้ว เมื่อ ${new Date(
+            lostRace.scannedAt
+          ).toLocaleString("th-TH")} โดย ${lostRace.scannedByUser?.name || "ไม่ระบุ"}`;
+        } else if (cancelledScan) {
+          wasReinstated = true;
+          statusMessage = `บันทึกการสแกนใหม่หลังจากยกเลิก: ${
+            membership.patient.prefix || ""
+          } ${membership.patient.first_name} ${
+            membership.patient.last_name
+          } ที่จุดตรวจ ${station.name} เวลา ${new Date(
+            scanItem.scannedAt
+          ).toLocaleString("th-TH")}`;
+        } else {
+          statusMessage = `บันทึกการสแกนสำเร็จ: ${
+            membership.patient.prefix || ""
+          } ${membership.patient.first_name} ${
+            membership.patient.last_name
+          } ที่จุดตรวจ ${station.name} เวลา ${new Date(
+            scanItem.scannedAt
+          ).toLocaleString("th-TH")}`;
+        }
+      }
+
+      // ลบหมายเหตุจุดตรวจถ้ายืนยัน (แพ้ race = คำขอที่ชนะลบให้แล้ว ลบซ้ำจะ error)
+      if (deleteRemark && stationRemark && !lostRace) {
+        await prisma.stationRemark.delete({ where: { id: stationRemark.id } });
+      }
+
       return {
-        success: true,
-        scanRecorded: false,
-        hasStationRemark: true,
-        stationRemark,
+        scanItem,
         patient: membership.patient,
         membership,
         station,
         registration,
+        isNewScan,
+        wasReinstated,
+        message: statusMessage,
+        success: true,
+        scanRecorded: true,
+        hasStationRemark: !!stationRemark,
+        stationRemark: stationRemark || null,
       };
-    }
-
-    let scanItem,
-      isNewScan = true,
-      statusMessage = "",
-      wasReinstated = false;
-
-    if (existingScan) {
-      scanItem = existingScan;
-      isNewScan = false;
-      const scannerName = existingScan.scannedByUser?.name || "ไม่ระบุ";
-      statusMessage = `ผู้ป่วยได้รับการตรวจที่จุดตรวจนี้แล้ว เมื่อ ${new Date(
-        existingScan.scannedAt
-      ).toLocaleString("th-TH")} โดย ${scannerName}`;
-    } else {
-      const cancelledScan = allPatientScans
-        .filter((scan) => scan.isCancelled)
-        .sort((a, b) => new Date(b.cancelledAt) - new Date(a.cancelledAt))[0];
-
-      scanItem = await prisma.scanItem.create({
-        data: {
-          patientId: membership.patientId,
-          registrationId: registration.id,
-          stationId: finalStationId,
-          scannedBy: userId ? parseInt(userId) : null,
-          isSpecialStation: station.isSpecial,
-          specialType: station.specialType,
-          scanType,
-          doctorVisit: station.requiresDoctorVisit ? doctorVisit : null,
-        },
-        include: {
-          scannedByUser: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          patient: {
-            select: {
-              id: true,
-              hn: true,
-              first_name: true,
-              last_name: true,
-            },
-          },
-          station: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      });
-
-      if (cancelledScan) {
-        wasReinstated = true;
-        statusMessage = `บันทึกการสแกนใหม่หลังจากยกเลิก: ${
-          membership.patient.prefix || ""
-        } ${membership.patient.first_name} ${
-          membership.patient.last_name
-        } ที่จุดตรวจ ${station.name} เวลา ${new Date(
-          scanItem.scannedAt
-        ).toLocaleString("th-TH")}`;
-      } else {
-        statusMessage = `บันทึกการสแกนสำเร็จ: ${
-          membership.patient.prefix || ""
-        } ${membership.patient.first_name} ${
-          membership.patient.last_name
-        } ที่จุดตรวจ ${station.name} เวลา ${new Date(
-          scanItem.scannedAt
-        ).toLocaleString("th-TH")}`;
-      }
-    }
-
-    // ลบหมายเหตุจุดตรวจถ้ายืนยัน
-    if (deleteRemark && stationRemark) {
-      await prisma.stationRemark.delete({ where: { id: stationRemark.id } });
-    }
-
-    return {
-      scanItem,
-      patient: membership.patient,
-      membership,
-      station,
-      registration,
-      isNewScan,
-      wasReinstated,
-      message: statusMessage,
-      success: true,
-      scanRecorded: true,
-      hasStationRemark: !!stationRemark,
-      stationRemark: stationRemark || null,
-    };
+    });
   } catch (error) {
     console.error("Error in scanCheckpoint:", error);
     return {
@@ -1311,14 +1351,19 @@ export const getScanItemsByMembership = async (membershipId, options = {}) => {
     }
 
     const skip = (page - 1) * limit;
-    const registrationFilter = membershipType === 'clinic'
+    // CN: ทั้งรอบ checkup และรอบเก็บตก (CLINIC ที่ผูก CN group เดียวกัน) — หน้าโปรไฟล์ถือว่า 1 แท็บ CN มีได้ทั้งสองรอบ
+    // ซ่อนแถว mirror (mirrorOf) เพราะเป็นสำเนาที่ระบบสร้างฝั่ง checkup ตอนยิงที่คลินิก ไม่ใช่การสแกนจริง
+    // ถ้าแสดงด้วยการยิงที่คลินิกครั้งเดียวจะโผล่ 2 แถวเวลาเดียวกัน (แถวคลินิกแสดงอยู่แล้ว)
+    const isClinic = membershipType === 'clinic';
+    const registrationFilter = isClinic
       ? { patientMembershipId: membershipId, isCancelled: false }
-      : { patientCNGroupId: membershipId, type: "CHECKUP", isCancelled: false };
+      : { patientCNGroupId: membershipId, isCancelled: false };
 
     const where = {
       ...(isCancelled !== undefined && isCancelled !== null
         ? { isCancelled: isCancelled === true || isCancelled === "true" }
         : {}),
+      ...(isClinic ? {} : { mirrorOf: null }),
       registration: registrationFilter,
     };
 
@@ -1346,6 +1391,8 @@ export const getScanItemsByMembership = async (membershipId, options = {}) => {
           registration: {
             select: {
               id: true,
+              type: true,
+              vnNumber: true,
               patientCNGroup: {
                 select: {
                   id: true,
@@ -3206,87 +3253,94 @@ export const bulkUpdateScanlog = async (patientHN, cnGroupId, stationIds, userId
       }
     }
 
-    // Get stations for names + requiresDoctorVisit
-    const stations = await prisma.station.findMany({
-      where: { id: { in: stationIds } },
-      select: { id: true, name: true, requiresDoctorVisit: true }
-    })
+    // เช็ค (existingScanItems) + เขียน (cancel/create) ต้องเรียงคิวทีละคำขอต่อ registration
+    // เดียวกัน กัน 2 คำขอ bulk พร้อมกันคำนวณ toAdd/toCancel จากข้อมูลเก่าคนละชุด (ดู scan-slot-lock.js)
+    return await withRegistrationLock(registration.id, async () => {
+      // Get stations for names + requiresDoctorVisit
+      const stations = await prisma.station.findMany({
+        where: { id: { in: stationIds } },
+        select: { id: true, name: true, requiresDoctorVisit: true }
+      })
 
-    // Get existing scanItems
-    const existingScanItems = await prisma.scanItem.findMany({
-      where: {
-        patientId: membership.patientId,
-        registrationId: registration.id,
-        isCancelled: false
-      },
-      select: { stationId: true }
-    })
-
-    const existingStationIds = existingScanItems.map(item => item.stationId)
-    const toAdd = stationIds.filter(id => !existingStationIds.includes(id))
-    const toCancel = existingStationIds.filter(id => !stationIds.includes(id))
-
-    // Cancel scanItems
-    if (toCancel.length > 0) {
-      await prisma.scanItem.updateMany({
+      // Get existing scanItems
+      const existingScanItems = await prisma.scanItem.findMany({
         where: {
           patientId: membership.patientId,
           registrationId: registration.id,
-          stationId: { in: toCancel },
           isCancelled: false
         },
-        data: {
-          isCancelled: true,
-          cancelledAt: new Date(),
-          cancelledBy: userId ? parseInt(userId) : null
-        }
-      })
-    }
-
-    // Create new scanItems
-    if (toAdd.length > 0) {
-      const scanItemsToCreate = toAdd.map(stationId => {
-        const station = stations.find(s => s.id === stationId)
-        return {
-          patientId: membership.patientId,
-          registrationId: registration.id,
-          stationId,
-          scannedBy: userId ? parseInt(userId) : null,
-          scanType: 'BULK',
-          doctorVisit: station?.requiresDoctorVisit ? true : null,
-        }
+        select: { stationId: true }
       })
 
-      await prisma.scanItem.createMany({
-        data: scanItemsToCreate
-      })
-    }
+      const existingStationIds = existingScanItems.map(item => item.stationId)
+      const toAdd = stationIds.filter(id => !existingStationIds.includes(id))
+      const toCancel = existingStationIds.filter(id => !stationIds.includes(id))
 
-    const addedNames = toAdd.map(id => {
-      const station = stations.find(s => s.id === id)
-      return station?.name || id
-    }).join(', ')
+      // Cancel scanItems
+      if (toCancel.length > 0) {
+        await prisma.scanItem.updateMany({
+          where: {
+            patientId: membership.patientId,
+            registrationId: registration.id,
+            stationId: { in: toCancel },
+            isCancelled: false
+          },
+          data: {
+            isCancelled: true,
+            cancelledAt: new Date(),
+            cancelledBy: userId ? parseInt(userId) : null
+          }
+        })
+      }
 
-    const cancelledNames = toCancel.map(id => {
-      const station = stations.find(s => s.id === id)
-      return station?.name || id
-    }).join(', ')
+      // Create new scanItems
+      if (toAdd.length > 0) {
+        const scanItemsToCreate = toAdd.map(stationId => {
+          const station = stations.find(s => s.id === stationId)
+          return {
+            patientId: membership.patientId,
+            registrationId: registration.id,
+            stationId,
+            scannedBy: userId ? parseInt(userId) : null,
+            scanType: 'BULK',
+            doctorVisit: station?.requiresDoctorVisit ? true : null,
+          }
+        })
 
-    let message = ''
-    if (toAdd.length > 0 && toCancel.length > 0) {
-      message = `เพิ่มการสแกน ${toAdd.length} จุด (${addedNames}) และยกเลิก ${toCancel.length} จุด (${cancelledNames})`
-    } else if (toAdd.length > 0) {
-      message = `เพิ่มการสแกน ${toAdd.length} จุด: ${addedNames}`
-    } else if (toCancel.length > 0) {
-      message = `ยกเลิกการสแกน ${toCancel.length} จุด: ${cancelledNames}`
-    } else {
-      message = 'ไม่มีการเปลี่ยนแปลง'
-    }
+        // skipDuplicates: slot ที่คำขออื่น (อาจอยู่คนละ instance) เพิ่งสร้างไปแล้วให้ข้าม ไม่ต้องล้มทั้งคำขอ
+        // — ชนกับ partial unique index "ScanItem_active_slot_key"
+        await prisma.scanItem.createMany({
+          data: scanItemsToCreate,
+          skipDuplicates: true
+        })
+      }
 
-    return {
-      success: true,
-      message
-    }
+      const addedNames = toAdd.map(id => {
+        const station = stations.find(s => s.id === id)
+        return station?.name || id
+      }).join(', ')
+
+      const cancelledNames = toCancel.map(id => {
+        const station = stations.find(s => s.id === id)
+        return station?.name || id
+      }).join(', ')
+
+      let message = ''
+      if (toAdd.length > 0 && toCancel.length > 0) {
+        message = `เพิ่มการสแกน ${toAdd.length} จุด (${addedNames}) และยกเลิก ${toCancel.length} จุด (${cancelledNames})`
+      } else if (toAdd.length > 0) {
+        message = `เพิ่มการสแกน ${toAdd.length} จุด: ${addedNames}`
+      } else if (toCancel.length > 0) {
+        message = `ยกเลิกการสแกน ${toCancel.length} จุด: ${cancelledNames}`
+      } else {
+        message = 'ไม่มีการเปลี่ยนแปลง'
+      }
+
+      return {
+        success: true,
+        message
+      }
+    })
   } catch (error) {
     console.error('Error in bulkUpdateScanlog:', error)
     return {
@@ -3347,9 +3401,26 @@ export const getRegisteringUsers = async (cnGroupId) => {
 // ==========================================
 
 /**
+ * จุดตรวจ LAB ที่ยังเปิดใช้งาน — ให้หน้า Lab Recheck เลือกก่อนยิง (ยิงข้ามจุดที่ไม่ได้เลือกไม่ได้)
+ * นิยาม "จุด LAB" ต้องตรงกับที่ recheckCheckpoint/getRecheckSummary ใช้ (มีรายการตรวจที่ examType = LAB)
+ * ไม่ผูกกับ CNGroup เพราะใช้ทั้งโหมด checkup และ clinic
+ */
+export const getLabStations = async () => {
+  const stations = await prisma.station.findMany({
+    where: {
+      isActive: true,
+      stationToMedicalItems: { some: { medicalItem: { examType: { code: 'LAB' } } } },
+    },
+    select: { id: true, name: true, isSpecial: true, specialType: true },
+    orderBy: { id: 'asc' },
+  })
+  return { success: true, data: stations }
+}
+
+/**
  * ยิง recheck ตัวอย่าง (checkup)
  * barcode format: CN.stationId เช่น 691220040.1
- * logic: UPDATE ScanItem source STATION→RECHECK (ไม่สร้าง record ใหม่)
+ * logic: ต้องมี ScanItem จากหน้างานอยู่จริงก่อน แล้วบันทึกการรับลง RecheckConfirmation (ไม่แตะ ScanItem)
  */
 export const recheckCheckpoint = async ({ barcode, cnGroupId, userId, userName }) => {
   try {
@@ -3373,6 +3444,10 @@ export const recheckCheckpoint = async ({ barcode, cnGroupId, userId, userName }
         cnGroup: { select: { id: true, name: true } },
         registrations: {
           where: { type: 'CHECKUP', isCancelled: false },
+          // ต้องเรียงหาใบล่าสุดเหมือนฝั่ง scanCheckpoint เสมอ — ถ้า CN นี้ดันมี registration active
+          // มากกว่า 1 ใบ (ข้อมูลผิดปกติจาก race ตอนลงทะเบียน) ไม่มี orderBy จะสุ่มได้ใบที่ไม่มี
+          // ScanItem อยู่เลย ทำให้ recheck ขึ้น "ไม่พบการยิงจากหน้างาน" ทั้งที่หน้างานยิงไปแล้วจริง
+          orderBy: { registeredAt: 'desc' },
           take: 1,
           select: { id: true },
         },
@@ -3417,17 +3492,60 @@ export const recheckCheckpoint = async ({ barcode, cnGroupId, userId, userName }
       orderBy: { scannedAt: 'desc' },
     })
     if (!scanItem) {
-      // ไม่มี ScanItem เลย — Lab ห้ามสร้างเองแล้ว (ตัดสินใจแล้วว่าห้าม เพราะทำให้ทะเบียน/หน้างาน
-      // ไม่รู้ว่ามีเคสนี้เกิดขึ้น และเจอเคส "หน้างานยิง A,B,C แต่ตัวอย่างมาถึงจริงเป็น A,B,D" ซึ่ง
-      // อันตรายกว่าจะให้ Lab เดาสร้างเอง) ต้อง reject แล้วให้ไปแจ้งหน้างาน/ทะเบียนแทน — บันทึกไว้เป็น
-      // exception ให้ตามสืบได้ (มีรายการตรวจจริง แต่หน้างานไม่เคยยิงมาเลย)
-      const message = `ไม่พบการยิงจากหน้างานสำหรับ "${station.name}" กรุณาแจ้งหน้างาน/ทะเบียนให้ตรวจสอบ`
-      await createRecheckException({ cnGroupId, cn, stationId, barcode, reason: 'SCAN_NOT_FOUND', message, userId })
-      return { success: false, message }
+      // ไม่มี ScanItem — Lab สร้างเองไม่ได้ (ScanItem เป็นข้อมูลของหน้างาน/ทะเบียน ถ้า Lab เขียนเองได้
+      // ก็จะเป็นความผิดพลาดแบบเดียวกับที่เพิ่งแก้ไป แค่กลับทิศ) แต่ต้องแยก 2 สถานการณ์ที่อันตรายต่างกันมาก
+
+      // Lab รับตัวอย่างนี้ไว้ก่อนแล้ว และกำลังรอทะเบียนบันทึกการยิงตาม — ยิงซ้ำก็แค่บอกสถานะ ไม่ต้องถามอะไรอีก
+      const existingConfirmation = await getActiveConfirmation({ registrationId, stationId })
+      const effectiveCnGroupId = membership.cnGroup?.id || cnGroupId
+      if (existingConfirmation && await hasPendingRegistrationRequest({ cnGroupId: effectiveCnGroupId, cn, stationId })) {
+        return {
+          success: true, isNewRecheck: false,
+          awaitingRegistration: true,
+          message: `รับไว้แล้ว รอทะเบียนบันทึกการยิง "${station.name}"`,
+          patient: membership.patient, station, cn,
+        }
+      }
+
+      const hasExamItem = !!(await prisma.patientExaminationItem.findFirst({
+        where: {
+          patientCNGroupId: membership.id,
+          status: 'ACTIVE',
+          medicalItem: { stationToMedicalItems: { some: { stationId, station: { isActive: true } } } },
+        },
+        select: { id: true },
+      }))
+
+      if (!hasExamItem) {
+        // ไม่มีใบสั่งตรวจรองรับเลย = ของมาผิด/เกิน/ติดฉลากผิด — เคสอันตรายที่เรากลัวมาตลอด
+        // ห้ามเปิดทางให้ส่งคำขอไปหาทะเบียนเด็ดขาด ไม่งั้นทะเบียนจะถูกขอให้สร้างของที่ไม่ควรมีอยู่
+        // แล้วอาจกดตามๆ ไปโดยไม่ทันคิด — ปฏิเสธจบตรงนี้ เก็บ ticket ไว้ให้ Lab สืบเอง
+        const message = `"${cn}" ไม่มีรายการตรวจที่ "${station.name}" — ตรวจสอบว่าหยิบตัวอย่างผิดหรือติดฉลากผิดหรือไม่`
+        await createRecheckException({ cnGroupId, cn, stationId, barcode, reason: 'STATION_NOT_ALLOWED', message, userId })
+        return { success: false, message }
+      }
+
+      // มีใบสั่งตรวจจริง แค่หน้างานยังไม่ได้ยิง — ความเสี่ยงต่ำ เพราะ 2 ฝ่ายตรงกันอยู่แล้ว
+      // (ใบสั่งบอกว่าต้องตรวจ + Lab บอกว่าของอยู่ในมือ) ให้ Lab รับไว้ก่อนแล้วแจ้งทะเบียนตามได้
+      // แต่ยังไม่บันทึกอะไรตรงนี้ — รอ Lab กดยืนยันก่อน (ดู requestRegistrationScan)
+      // ไม่งั้นยิงพลาด/ยิงผิดใบทีก็กลายเป็นรับของที่ไม่มีอยู่จริง + เด้งไปรบกวนทะเบียน
+      return {
+        success: false,
+        canRequestRegistrationScan: true,
+        // รับไว้แล้วแต่รายการหน้างานหายไปทีหลัง (เคสขัดแย้ง) — แจ้งทะเบียนได้ แต่ไม่ต้องรับซ้ำ
+        alreadyReceived: !!existingConfirmation,
+        message: `ยังไม่มีการยิงจากหน้างานสำหรับ "${station.name}"`,
+        cn,
+        stationId,
+        barcode,
+        patient: membership.patient,
+        station,
+      }
     }
-    if (scanItem.source === 'RECHECK') {
-      const timeStr = scanItem.recheckAt
-        ? `เมื่อ ${new Date(scanItem.recheckAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`
+    const alreadyConfirmed = await getActiveConfirmation({ registrationId, stationId })
+    if (alreadyConfirmed) {
+      const timeStr = alreadyConfirmed.confirmedAt
+        ? `เมื่อ ${new Date(alreadyConfirmed.confirmedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`
         : ''
       return {
         success: true, isNewRecheck: false,
@@ -3437,10 +3555,16 @@ export const recheckCheckpoint = async ({ barcode, cnGroupId, userId, userName }
       }
     }
 
-    // UPDATE source → RECHECK
-    await prisma.scanItem.update({
-      where: { id: scanItem.id },
-      data: { source: 'RECHECK', recheckAt: new Date(), recheckBy: userId ? Number(userId) : null },
+    // บันทึกการรับตัวอย่างลงตารางแยก ไม่แตะ ScanItem — ScanItem เป็นของหน้างาน/ทะเบียน
+    // ที่ถูกยกเลิก/สร้างใหม่ได้ตลอดจากหลายทาง ถ้าเขียนหลักฐานการรับทับลงไปจะหายไปพร้อมกัน
+    await confirmRecheck({
+      registrationId,
+      stationId,
+      patientId: membership.patientId,
+      cnGroupId,
+      cn,
+      scanItemId: scanItem.id,
+      userId,
     })
 
     // recheck ผ่านจริงแล้ว — ถ้าเคยมี exception ค้างไว้สำหรับ CN+จุดตรวจนี้ (SCAN_NOT_FOUND ที่เพิ่งมี
@@ -3460,31 +3584,36 @@ export const recheckCheckpoint = async ({ barcode, cnGroupId, userId, userName }
 }
 
 /**
- * ยกเลิก recheck — คืนกลับเป็น STATION (Lab สร้างเองไม่มีแล้ว มีทางเดียว)
+ * ยกเลิกการยืนยันรับตัวอย่างของ Lab — ยกเลิกที่ RecheckConfirmation ไม่แตะ ScanItem เลย
+ *
+ * ตั้งใจ "ไม่" บล็อกกรณี ScanItem ถูกยกเลิกไปแล้ว เพราะนั่นคือเคสขัดแย้ง (Lab รับไปแล้วแต่รายการ
+ * หน้างานถูกลบทีหลัง) ซึ่งการกดยกเลิกการรับตรงนี้แหละคือทางปิดเคสที่ถูกต้องทางหนึ่ง — ถ้าบล็อกไว้
+ * ticket ขัดแย้งจะปิดไม่ลงเลย
  */
 export const cancelRecheck = async ({ scanItemId, userId }) => {
   try {
     const scanItem = await prisma.scanItem.findUnique({
       where: { id: scanItemId },
       select: {
-        id: true, source: true, isCancelled: true,
+        id: true, stationId: true, registrationId: true,
         patient: { select: { id: true, hn: true, prefix: true, first_name: true, last_name: true } },
         station: { select: { id: true, name: true } },
         registration: { select: { patientCNGroup: { select: { cn: true, cnGroupId: true } } } },
       },
     })
     if (!scanItem) return { success: false, message: 'ไม่พบ ScanItem' }
-    if (scanItem.isCancelled) return { success: false, message: 'ScanItem ถูกยกเลิกแล้ว' }
-    if (scanItem.source === 'STATION') return { success: false, message: 'ยังไม่ได้ recheck ไม่สามารถยกเลิกได้' }
+    if (!scanItem.registrationId) return { success: false, message: 'ScanItem นี้ไม่ผูกกับการลงทะเบียน' }
 
     const cn = scanItem.registration?.patientCNGroup?.cn || null
     const cnGroupId = scanItem.registration?.patientCNGroup?.cnGroupId || null
 
-    // RECHECK → คืนกลับ STATION (Lab สร้างเองไม่มีแล้ว เหลือแค่ทางนี้ทางเดียว)
-    await prisma.scanItem.update({
-      where: { id: scanItemId },
-      data: { source: 'STATION', recheckAt: null, recheckBy: null },
+    const cancelled = await cancelConfirmation({
+      registrationId: scanItem.registrationId,
+      stationId: scanItem.stationId,
+      userId,
     })
+    if (!cancelled) return { success: false, message: 'ยังไม่ได้ recheck ไม่สามารถยกเลิกได้' }
+
     return { success: true, message: 'ยกเลิก recheck สำเร็จ', patient: scanItem.patient, station: scanItem.station, cn, cnGroupId }
   } catch (error) {
     console.error('❌ cancelRecheck error:', error)
@@ -3497,9 +3626,9 @@ export const cancelRecheck = async ({ scanItemId, userId }) => {
  * ไม่ใช่รายการตรวจที่สั่งไว้ทั้งหมด เพราะ Lab ไม่จำเป็นต้องรู้ว่าใครยังไม่ถูกยิงเลย (เป็นเรื่องของหน้างาน/
  * ทะเบียนที่ต้องตามเอง) Lab สนใจแค่ "ที่ส่งมาถึงมือแล้ว มีกี่คนที่ยังไม่ได้ยืนยันรับ"
  *
- * 2 สถานะ:
- *   awaitingReceive = มี ScanItem (source=STATION) แล้ว แต่ Lab ยังไม่ยืนยันรับ
- *   received        = Lab ยืนยันรับแล้ว (source=RECHECK)
+ * 2 สถานะ (คำนวณจาก 2 ตารางประกอบกัน ไม่ได้เก็บเป็น field เดียวบน ScanItem):
+ *   awaitingReceive = มี ScanItem active แล้ว แต่ยังไม่มี RecheckConfirmation ของ slot นั้น
+ *   received        = มีทั้ง ScanItem active และ RecheckConfirmation ของ slot เดียวกัน
  */
 export const getRecheckSummary = async ({ cnGroupId }) => {
   try {
@@ -3520,68 +3649,85 @@ export const getRecheckSummary = async ({ cnGroupId }) => {
         stationId: { in: labStationIds },
         registration: { patientCNGroup: { cnGroupId }, type: 'CHECKUP', isCancelled: false },
       },
-      select: {
-        source: true,
-        stationId: true,
-        patient: { select: { id: true, hn: true, prefix: true, first_name: true, last_name: true } },
-        registration: {
-          select: {
-            patientCNGroup: { select: { cn: true, companyName: true, department: true, position: true, employeeCode: true } },
-          },
-        },
-      },
+      // ตัวเลขล้วน — รายชื่อคนไข้ต่อจุดอยู่ที่ getRecheckStationPatients (modal รายจุด โหลดตอนเปิด แบ่งหน้า)
+      // เดิมแนบรายชื่อคนรอเช็คทุกคนมาด้วย ไม่มีหน้าจอไหนใช้ แต่ทำให้คำตอบใหญ่หลาย MB ทุกครั้งที่รีเฟรช
+      select: { registrationId: true, stationId: true, patientId: true },
     })
 
-    const patientInfoMap = new Map()
-    const stationScans = new Map() // stationId -> [{ source, patientId }]
-    for (const item of scans) {
-      const pid = item.patient.id
-      if (!patientInfoMap.has(pid)) {
-        const m = item.registration?.patientCNGroup
-        patientInfoMap.set(pid, {
-          patientId: pid,
-          hn: item.patient.hn,
-          cn: m?.cn,
-          name: `${item.patient.prefix || ''}${item.patient.first_name} ${item.patient.last_name}`,
-          companyName: m?.companyName || null,
-          department: m?.department || null,
-          position: m?.position || null,
-          employeeCode: m?.employeeCode || null,
-        })
-      }
-      if (!stationScans.has(item.stationId)) stationScans.set(item.stationId, [])
-      stationScans.get(item.stationId).push({ source: item.source, patientId: pid })
+    // "รับแล้ว" มาจากตารางแยก — เทียบกันด้วย slot (registrationId + stationId)
+    const confirmations = await getConfirmationsForCNGroup({ cnGroupId, stationIds: labStationIds })
+    const confirmedSlots = new Set(confirmations.map(c => slotKey(c.registrationId, c.stationId)))
+    const isReceived = (item) => confirmedSlots.has(slotKey(item.registrationId, item.stationId))
+
+    const activeSlotKeys = new Set(scans.map(s => slotKey(s.registrationId, s.stationId)))
+
+    // Lab รับไว้ก่อน รอทะเบียนบันทึกการยิง = มีใบรับ แต่ช่องนั้นยังไม่มี ScanItem และมีคำขอค้างที่ทะเบียน
+    // ตัวอย่างอยู่ในมือ Lab จริงแล้ว ต้องนับเป็น "รับแล้ว" (และนับเข้า "ทั้งหมด" ด้วย ไม่งั้น % เพี้ยน)
+    const pendingRequestKeys = await getPendingRequestKeys({ cnGroupId })
+    const labFirstBySlot = new Map()
+    // ใบรับที่ไม่มีการยิงรองรับและไม่ได้รอทะเบียน (ทะเบียนปฏิเสธ / รายการหน้างานถูกยกเลิก) = ตัวอย่างค้างต้องตรวจสอบ
+    // ไม่นับในยอด เพราะไม่มีหลักฐานว่าคนไข้ผ่านจุดนี้ — แต่ต้องโชว์แยก ไม่งั้นการ์ดขึ้น "ครบ" ทั้งที่ถาดมีตัวอย่างเกิน
+    const needsReviewBySlot = new Map()
+    for (const c of confirmations) {
+      const key = slotKey(c.registrationId, c.stationId)
+      if (activeSlotKeys.has(key)) continue
+      if (pendingRequestKeys.has(`${c.cn}_${c.stationId}`)) labFirstBySlot.set(key, c)
+      else needsReviewBySlot.set(key, c)
+    }
+    const labFirst = [...labFirstBySlot.values()]
+    const needsReview = [...needsReviewBySlot.values()]
+
+    // ใบรับที่ช่องไม่มี ScanItem แล้ว และไม่ได้รอทะเบียนอยู่ = ขัดแย้งจริง (รายการหน้างานหายไป /
+    // ทะเบียนปฏิเสธ) ส่งไปฟ้อง — ใช้ข้อมูลที่ดึงมาแล้ว diff กัน ไม่มีเควรีเพิ่ม
+    await syncRecheckConflicts({ cnGroupId, confirmations, activeSlotKeys, pendingRequestKeys })
+
+    // รวมเป็นรายการตัวอย่างชุดเดียว แล้วนับทุกยอดจากชุดนี้ชุดเดียว — การ์ดบนสุด การ์ดรายจุด
+    // และจำนวนคน จะได้ตรงกันเสมอ ไม่มีตัวไหนนับคนละฐาน
+    const samples = [
+      ...scans.map(s => ({ stationId: s.stationId, patientId: s.patientId, received: isReceived(s), awaitingRegistration: false })),
+      ...labFirst.map(c => ({ stationId: c.stationId, patientId: c.patientId, received: true, awaitingRegistration: true })),
+    ]
+
+    const stationSamples = new Map()
+    for (const s of samples) {
+      if (!stationSamples.has(s.stationId)) stationSamples.set(s.stationId, [])
+      stationSamples.get(s.stationId).push(s)
+    }
+    const needsReviewByStation = new Map()
+    for (const c of needsReview) {
+      needsReviewByStation.set(c.stationId, (needsReviewByStation.get(c.stationId) || 0) + 1)
+      // จุดที่มีแต่ตัวอย่างค้าง (ไม่มีตัวอย่างปกติเลย) ก็ต้องมีการ์ด ไม่งั้นตัวอย่างค้างหายไปจากหน้าจอ
+      if (!stationSamples.has(c.stationId)) stationSamples.set(c.stationId, [])
     }
 
-    const stations = Array.from(stationScans.entries()).map(([sid, items]) => {
+    const stations = Array.from(stationSamples.entries()).map(([sid, items]) => {
       const total = items.length
-      const received = items.filter(i => i.source === 'RECHECK').length
-      const awaitingItems = items.filter(i => i.source === 'STATION')
+      const received = items.filter(i => i.received).length
       return {
         stationId: sid,
         stationName: stationNames.get(sid) || '',
         total,
-        awaitingReceive: awaitingItems.length,
+        awaitingReceive: total - received,
         received,
+        awaitingRegistration: items.filter(i => i.awaitingRegistration).length,
+        needsReview: needsReviewByStation.get(sid) || 0,
         progress: total > 0 ? Math.round((received / total) * 100) : 0,
-        awaitingReceivePatients: awaitingItems.map(i => patientInfoMap.get(i.patientId)).filter(Boolean),
       }
     }).sort((a, b) => a.stationId - b.stationId)
 
-    // สรุปภาพรวม: หลัก = นับเป็น "ตัวอย่าง" (ScanItem) หน่วยเดียวกับการ์ดรายจุดด้านล่าง เพื่อให้
+    // สรุปภาพรวม: หลัก = นับเป็น "ตัวอย่าง" หน่วยเดียวกับการ์ดรายจุดด้านล่าง เพื่อให้
     // ตัวเลขบนสุด = ผลรวมของทุกการ์ดรายจุด ตรวจสอบไขว้กันเองได้ ไม่งงว่าทำไมไม่เท่ากัน
-    const totalSamples = scans.length
-    const receivedCount = scans.filter(s => s.source === 'RECHECK').length
+    const totalSamples = samples.length
+    const receivedCount = samples.filter(s => s.received).length
 
     // เสริม: จำนวนคน (unique patient) — แยกไว้เป็นตัวเลขรองข้างๆ ตัวอย่าง ไม่ใช้แทนกัน
-    // ครบ (received) = ทุกตัวอย่างของคนนั้นเป็น RECHECK หมด, ไม่ครบ = ยังมีอย่างน้อย 1 ตัวอย่างที่ STATION
+    // ครบ (received) = ทุกตัวอย่างของคนนั้น Lab ยืนยันรับหมดแล้ว, ไม่ครบ = ยังเหลืออย่างน้อย 1 ตัวอย่าง
     const patientAllReceived = new Map()
-    for (const item of scans) {
-      const pid = item.patient.id
-      if (!patientAllReceived.has(pid)) patientAllReceived.set(pid, true)
-      if (item.source === 'STATION') patientAllReceived.set(pid, false)
+    for (const s of samples) {
+      if (!patientAllReceived.has(s.patientId)) patientAllReceived.set(s.patientId, true)
+      if (!s.received) patientAllReceived.set(s.patientId, false)
     }
-    const allPatientIds = [...patientInfoMap.keys()]
+    const allPatientIds = [...patientAllReceived.keys()]
     const receivedPatientCount = allPatientIds.filter(pid => patientAllReceived.get(pid)).length
 
     return {
@@ -3590,6 +3736,8 @@ export const getRecheckSummary = async ({ cnGroupId }) => {
         totalSamples,
         awaitingReceiveCount: totalSamples - receivedCount,
         receivedCount,
+        awaitingRegistrationCount: labFirst.length,
+        needsReviewCount: needsReview.length,
         totalPatients: allPatientIds.length,
         awaitingReceivePatientCount: allPatientIds.length - receivedPatientCount,
         receivedPatientCount,
@@ -3611,8 +3759,13 @@ export const getRecheckStationPatients = async ({ cnGroupId, stationId, scanStat
     registration: { patientCNGroup: { cnGroupId }, type: 'CHECKUP', isCancelled: false },
   }
 
-  if (scanStatus === 'awaitingReceive') baseWhere.source = 'STATION'
-  else if (scanStatus === 'received') baseWhere.source = 'RECHECK'
+  // "รับแล้ว/ยังไม่รับ" อยู่คนละตาราง — กรองผ่าน relation เพื่อให้ pagination/count ยังทำงานฝั่ง SQL
+  const stationIdInt = parseInt(stationId)
+  const receivedFilter = { recheckConfirmations: { some: { stationId: stationIdInt, isCancelled: false } } }
+  const awaitingFilter = { recheckConfirmations: { none: { stationId: stationIdInt, isCancelled: false } } }
+
+  if (scanStatus === 'awaitingReceive') Object.assign(baseWhere.registration, awaitingFilter)
+  else if (scanStatus === 'received') Object.assign(baseWhere.registration, receivedFilter)
 
   if (search.trim()) {
     baseWhere.OR = [
@@ -3632,11 +3785,15 @@ export const getRecheckStationPatients = async ({ cnGroupId, stationId, scanStat
       orderBy: [{ registration: { patientCNGroup: { cn: 'asc' } } }],
       select: {
         id: true,
-        source: true,
         patient: { select: { id: true, hn: true, prefix: true, first_name: true, last_name: true } },
         registration: {
           select: {
             createdAt: true,
+            recheckConfirmations: {
+              where: { stationId: stationIdInt, isCancelled: false },
+              take: 1,
+              select: { id: true, confirmedAt: true },
+            },
             patientCNGroup: {
               select: { cn: true, companyName: true, department: true, position: true, employeeCode: true },
             },
@@ -3646,20 +3803,34 @@ export const getRecheckStationPatients = async ({ cnGroupId, stationId, scanStat
     }),
     prisma.scanItem.count({ where: baseWhere }),
     prisma.scanItem.count({
-      where: { isCancelled: false, stationId: parseInt(stationId), source: 'RECHECK', registration: { patientCNGroup: { cnGroupId }, type: 'CHECKUP', isCancelled: false } },
+      where: { isCancelled: false, stationId: stationIdInt, registration: { patientCNGroup: { cnGroupId }, type: 'CHECKUP', isCancelled: false, ...receivedFilter } },
     }),
     prisma.scanItem.count({
-      where: { isCancelled: false, stationId: parseInt(stationId), source: 'STATION', registration: { patientCNGroup: { cnGroupId }, type: 'CHECKUP', isCancelled: false } },
+      where: { isCancelled: false, stationId: stationIdInt, registration: { patientCNGroup: { cnGroupId }, type: 'CHECKUP', isCancelled: false, ...awaitingFilter } },
     }),
   ])
 
+  // ใบรับที่ไม่มี ScanItem รองรับ ไม่อยู่ในเควรีข้างบน ต้องดึงแยก — ส่งเป็น field ของตัวเอง ไม่ยัดรวมกับ
+  // หน้าที่แบ่งหน้าอยู่ (มีไม่กี่รายการ แสดงเป็นกลุ่มด้านบนตาราง)
+  //   awaitingRegistration = Lab รับไว้ก่อน รอทะเบียน → นับรวมยอด ไม่งั้นการ์ดบอก 10 แต่รายชื่อมี 9
+  //   needsReview          = ทะเบียนปฏิเสธ / รายการหน้างานหาย → ไม่นับในยอด แต่แสดงเสมอทุกแท็บ
+  //                          (ไม่ขึ้นกับแท็บ เพราะไม่ใช่ทั้งรับแล้วและยังไม่รับ เป็นเรื่องที่ต้องตัดสิน)
+  const unbacked = await getUnbackedReceipts({ cnGroupId, stationIds: [stationIdInt] })
+  const q = search.trim().toLowerCase()
+  const matchesSearch = (r) => !q || [r.name, r.cn, r.companyName, r.department]
+    .some((v) => v && String(v).toLowerCase().includes(q))
+  const awaitingRegistrationAll = unbacked.filter((r) => r.kind === 'awaitingRegistration')
+  const needsReviewAll = unbacked.filter((r) => r.kind === 'needsReview')
+  const awaitingRegistration = scanStatus === 'awaitingReceive' ? [] : awaitingRegistrationAll.filter(matchesSearch)
+  const needsReview = needsReviewAll.filter(matchesSearch)
+
   const data = items.map(item => {
     const m = item.registration?.patientCNGroup
+    const received = (item.registration?.recheckConfirmations?.length ?? 0) > 0
     return {
       patientId: item.patient.id,
       scanItemId: item.id,
-      source: item.source,
-      status: item.source === 'STATION' ? 'awaitingReceive' : 'received',
+      status: received ? 'received' : 'awaitingReceive',
       hn: item.patient.hn,
       cn: m?.cn || null,
       name: `${item.patient.prefix || ''}${item.patient.first_name} ${item.patient.last_name}`,
@@ -3671,10 +3842,36 @@ export const getRecheckStationPatients = async ({ cnGroupId, stationId, scanStat
     }
   })
 
+  const labFirstCount = awaitingRegistrationAll.length
+  const toUnbackedRow = (r) => ({
+    patientId: r.patientId,
+    scanItemId: null,
+    confirmationId: r.confirmationId,
+    status: r.kind === 'awaitingRegistration' ? 'received' : 'needsReview',
+    awaitingRegistration: r.kind === 'awaitingRegistration',
+    reviewReason: r.reviewReason,
+    hn: r.hn,
+    cn: r.cn,
+    name: r.name,
+    companyName: r.companyName,
+    department: r.department,
+    position: r.position,
+    employeeCode: r.employeeCode,
+    registeredAt: r.registeredAt,
+    confirmedAt: r.confirmedAt,
+  })
   return {
     success: true,
     data,
-    summary: { total: receivedCount + awaitingReceiveCount, receivedCount, awaitingReceiveCount },
+    awaitingRegistration: awaitingRegistration.map(toUnbackedRow),
+    needsReview: needsReview.map(toUnbackedRow),
+    summary: {
+      total: receivedCount + awaitingReceiveCount + labFirstCount,
+      receivedCount: receivedCount + labFirstCount,
+      awaitingReceiveCount,
+      awaitingRegistrationCount: labFirstCount,
+      needsReviewCount: needsReviewAll.length,
+    },
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),

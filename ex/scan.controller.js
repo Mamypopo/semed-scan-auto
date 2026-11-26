@@ -14,6 +14,7 @@ import {
   bulkUpdateScanlog as bulkUpdateScanlogService,
   getRegisteringUsers as getRegisteringUsersService,
   recheckCheckpoint as recheckCheckpointService,
+  getLabStations as getLabStationsService,
   cancelRecheck as cancelRecheckService,
   getRecheckSummary as getRecheckSummaryService,
   getRecheckStationPatients as getRecheckStationPatientsService,
@@ -21,7 +22,19 @@ import {
 import {
   getRecheckExceptions as getRecheckExceptionsService,
   resolveRecheckException as resolveRecheckExceptionService,
+  bulkResolveRecheckExceptions as bulkResolveRecheckExceptionsService,
 } from "./recheck-exception.service.js";
+import {
+  requestRegistrationScan as requestRegistrationScanService,
+  getRegistrationTaskSummary as getRegistrationTaskSummaryService,
+  getRegistrationTasks as getRegistrationTasksService,
+  confirmRegistrationTask as confirmRegistrationTaskService,
+  rejectRegistrationTask as rejectRegistrationTaskService,
+  bulkConfirmRegistrationTasks as bulkConfirmRegistrationTasksService,
+  bulkRejectRegistrationTasks as bulkRejectRegistrationTasksService,
+  cancelUnbackedReceipt as cancelUnbackedReceiptService,
+  bulkCancelUnbackedReceipts as bulkCancelUnbackedReceiptsService,
+} from "./registration-task.service.js";
 import { createSystemLog } from "../utils/logger.js";
 import { emitScanAndCustomerDashboardUpdate, emitRecheckUpdate } from "../socket/socket.service.js";
 
@@ -882,9 +895,9 @@ export const scanController = {
 
   getRecheckExceptions: async (req, res, next) => {
     try {
-      const { cnGroupId, status, page, limit } = req.query
+      const { cnGroupId, status, reason, search, page, limit } = req.query
       if (!cnGroupId) return res.status(400).json({ success: false, message: 'กรุณาระบุ cnGroupId' })
-      const result = await getRecheckExceptionsService({ cnGroupId, status, page, limit })
+      const result = await getRecheckExceptionsService({ cnGroupId, status, reason, search, page, limit })
       res.status(200).json(result)
     } catch (error) {
       next(error)
@@ -908,6 +921,216 @@ export const scanController = {
           null,
           []
         ).catch((err) => console.error('Error creating system log:', err))
+      }
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  bulkResolveRecheckExceptions: async (req, res, next) => {
+    try {
+      const { cnGroupId, ids, applyToAll, reason, search, status, resolutionNote } = req.body
+      const userId = req.user?.id
+      if (!cnGroupId) return res.status(400).json({ success: false, message: 'กรุณาระบุ cnGroupId' })
+
+      const result = await bulkResolveRecheckExceptionsService({
+        cnGroupId, ids, applyToAll, reason, search, status, resolutionNote, userId,
+      })
+      res.status(result.success ? 200 : 400).json(result)
+
+      if (result.success) {
+        createSystemLog(
+          req,
+          'RECHECK_EXCEPTION_BULK_RESOLVE',
+          { cnGroupId, status, reason: reason || 'all', applyToAll: !!applyToAll, count: result.count, resolutionNote: resolutionNote || null },
+          null,
+          null,
+          []
+        ).catch((err) => console.error('Error creating system log:', err))
+      }
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  getLabStations: async (req, res, next) => {
+    try {
+      const result = await getLabStationsService()
+      res.status(200).json(result)
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  // ===== งานที่ Lab ส่งมาขอให้ทะเบียนดำเนินการ =====
+
+  requestRegistrationScan: async (req, res, next) => {
+    try {
+      const { cnGroupId, cn, stationId, barcode } = req.body
+      const userId = req.user?.id
+      if (!cn || !stationId) return res.status(400).json({ success: false, message: 'ข้อมูลไม่ครบ' })
+
+      const result = await requestRegistrationScanService({
+        cnGroupId, cn, stationId: parseInt(stationId), barcode, userId,
+      })
+      res.status(result.success ? 200 : 400).json(result)
+
+      if (result.success && !result.alreadyRequested) {
+        createSystemLog(req, 'RECHECK_REQUEST_REGISTRATION_SCAN', { cnGroupId, cn, stationId, barcode, receivedNow: !!result.receivedNow }, null, null, [cn])
+          .catch((err) => console.error('Error creating system log:', err))
+
+        // Lab รับไว้ก่อน = ยอดรับแล้วขยับทันที ให้หน้า Lab เครื่องอื่นรีเฟรชตาม
+        const io = req.app.get('io')
+        if (io && result.cnGroupId) emitRecheckUpdate(io, result.cnGroupId)
+      }
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  getRegistrationTaskSummary: async (req, res, next) => {
+    try {
+      const result = await getRegistrationTaskSummaryService()
+      res.status(200).json(result)
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  getRegistrationTasks: async (req, res, next) => {
+    try {
+      const { cnGroupId, page, limit } = req.query
+      const result = await getRegistrationTasksService({ cnGroupId, page, limit })
+      res.status(result.success ? 200 : 400).json(result)
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  confirmRegistrationTask: async (req, res, next) => {
+    try {
+      const { id } = req.params
+      const userId = req.user?.id
+      const result = await confirmRegistrationTaskService({ exceptionId: id, userId })
+      res.status(result.success ? 200 : 400).json(result)
+
+      if (result.success) {
+        createSystemLog(
+          req,
+          'REGISTRATION_TASK_CONFIRM',
+          { exceptionId: id, cn: result.cn, stationName: result.stationName },
+          null, null, result.cn ? [result.cn] : []
+        ).catch((err) => console.error('Error creating system log:', err))
+
+        // แจ้งหน้า Lab ให้รีเฟรช — ยอด "รับแล้ว" เพิ่งขยับจากการกดของทะเบียน
+        const io = req.app.get('io')
+        if (io && result.cnGroupId) emitRecheckUpdate(io, result.cnGroupId)
+      }
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  rejectRegistrationTask: async (req, res, next) => {
+    try {
+      const { id } = req.params
+      const { note } = req.body
+      const userId = req.user?.id
+      const result = await rejectRegistrationTaskService({ exceptionId: id, note, userId })
+      res.status(result.success ? 200 : 400).json(result)
+
+      if (result.success) {
+        createSystemLog(req, 'REGISTRATION_TASK_REJECT', { exceptionId: id, note: note || null }, null, null, [])
+          .catch((err) => console.error('Error creating system log:', err))
+
+        // ถ้า Lab รับไว้ก่อน ตัวอย่างนั้นจะหลุดจากยอดรับแล้ว + ขึ้นเป็นรายการผิดปกติ ให้หน้า Lab เห็นทันที
+        const io = req.app.get('io')
+        if (io && result.cnGroupId) emitRecheckUpdate(io, result.cnGroupId)
+      }
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  // Lab ยกเลิกการรับตัวอย่างที่ไม่มีการยิงรองรับ (ทะเบียนปฏิเสธ / รายการหน้างานหาย / รอทะเบียนอยู่)
+  cancelUnbackedReceipt: async (req, res, next) => {
+    try {
+      const { confirmationId, exceptionId } = req.body
+      const userId = req.user?.id
+      const result = await cancelUnbackedReceiptService({ confirmationId, exceptionId, userId })
+      res.status(result.success ? 200 : 400).json(result)
+
+      if (result.success) {
+        createSystemLog(req, 'RECHECK_CANCEL_UNBACKED_RECEIPT', { confirmationId: confirmationId || null, exceptionId: exceptionId || null }, null, null, [])
+          .catch((err) => console.error('Error creating system log:', err))
+
+        const io = req.app.get('io')
+        if (io && result.cnGroupId) emitRecheckUpdate(io, result.cnGroupId)
+      }
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  bulkCancelUnbackedReceipts: async (req, res, next) => {
+    try {
+      const { cnGroupId, ids, applyToAll, search } = req.body
+      const userId = req.user?.id
+      const result = await bulkCancelUnbackedReceiptsService({ cnGroupId, ids, applyToAll, search, userId })
+      res.status(result.success ? 200 : 400).json(result)
+
+      if (result.success && result.count > 0) {
+        createSystemLog(req, 'RECHECK_BULK_CANCEL_UNBACKED_RECEIPT', { cnGroupId, applyToAll: !!applyToAll, ids: applyToAll ? null : ids, count: result.count }, null, null, [])
+          .catch((err) => console.error('Error creating system log:', err))
+
+        const io = req.app.get('io')
+        if (io) emitRecheckUpdate(io, cnGroupId)
+      }
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  bulkConfirmRegistrationTasks: async (req, res, next) => {
+    try {
+      const { cnGroupId, ids, applyToAll } = req.body
+      const userId = req.user?.id
+      const result = await bulkConfirmRegistrationTasksService({ cnGroupId, ids, applyToAll, userId })
+      res.status(result.success ? 200 : 400).json(result)
+
+      if (result.success && result.confirmed > 0) {
+        createSystemLog(
+          req,
+          'REGISTRATION_TASK_BULK_CONFIRM',
+          { cnGroupId, applyToAll: !!applyToAll, confirmed: result.confirmed, failedCount: result.failed.length },
+          null, null, []
+        ).catch((err) => console.error('Error creating system log:', err))
+
+        const io = req.app.get('io')
+        if (io && cnGroupId) emitRecheckUpdate(io, cnGroupId)
+      }
+    } catch (error) {
+      next(error)
+    }
+  },
+
+  bulkRejectRegistrationTasks: async (req, res, next) => {
+    try {
+      const { cnGroupId, ids, applyToAll, note } = req.body
+      const userId = req.user?.id
+      const result = await bulkRejectRegistrationTasksService({ cnGroupId, ids, applyToAll, note, userId })
+      res.status(result.success ? 200 : 400).json(result)
+
+      if (result.success) {
+        createSystemLog(
+          req,
+          'REGISTRATION_TASK_BULK_REJECT',
+          { cnGroupId, applyToAll: !!applyToAll, count: result.count, note: note || null },
+          null, null, []
+        ).catch((err) => console.error('Error creating system log:', err))
+
+        const io = req.app.get('io')
+        if (io && cnGroupId) emitRecheckUpdate(io, cnGroupId)
       }
     } catch (error) {
       next(error)
